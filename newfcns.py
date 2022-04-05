@@ -11,7 +11,7 @@ from time import sleep
 ##
 
 
-#
+##s
 # Convert XY rel LL corner to row, col
 #
 ##  from   XY referenced to center of img:
@@ -21,7 +21,7 @@ from time import sleep
 #                       |
 #      -----------------------------------
 #         X             |\
-#                       | (img_height_rows/2, img_width_cols/2)
+#                       |  (img_width_cols/2,img_height_rows/2)
 #                       |
 #                       |
 #
