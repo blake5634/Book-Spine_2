@@ -16,31 +16,38 @@ class bookImage():
         self.ishape()
         # validate image type here
         
-        
-    def get_px_RC(self,row,col):
-        return(self.image[row][col])
-    
-    def get_px_XYmm(self,X,Y):
-        row,col = self.XYmm2RC(X,Y)
-        return self.image[row,col]
-    
-    def XYmm2RC(self,X,Y):        
-        row = int((self.ctY-Y)/self.scale)
-        col = int((self.ctX+X)/self.scale)
-        return row, col
-    
-    def RC2XYmm(self,row,col):
-        X = col*self.scale+self.ctX
-        Y = -(row*self.scale-self.ctY)
-        return X, Y
     
     def ishape(self):        
         sh = self.image.shape
         self.rows = sh[0]
         self.cols = sh[1]
-        self.ctX = self.cols*self.scale/2  # mm offset to center of image H
-        self.ctY = self.rows*self.scale/2  # mm offset to center of image V
+        self.width_mm =  self.cols*self.scale
+        self.height_mm = self.rows*self.scale
+        self.ctXmm = self.width_mm/2.0    # mm offset to center of image H
+        self.ctYmm = self.height_mm/2.0  # mm offset to center of image V
+        
+        print('   Image scale info:')
+        print('   rows/cols: ',      sh)
+        print('   height/width(mm)', self.height_mm, self.width_mm )
+    
         return sh
+        
+    def get_px_RC(self,row,col):
+        return(self.image[row][col])
+    
+    def get_px_XYmm(self,Xmm,Ymm):
+        row,col = self.XYmm2RC(Xmm,Ymm)
+        return self.image[row,col]
+    
+    def XYmm2RC(self,Xmm,Ymm):        
+        row = int(self.rows/2  - Ymm/self.scale)
+        col = int(self.cols/2  + Xmm/self.scale)
+        return row, col
+    
+    def RC2XYmm(self,row,col):
+        Xmm =   col*self.scale    - self.ctXmm
+        Ymm =   -1*row*self.scale + self.ctYmm
+        return Xmm, Ymm
         
     # create a new bookImage scaled down by factor
     def downvert(self, factor):
@@ -56,20 +63,34 @@ class bookImage():
     #
     #  if image scale is different from "scale" then use param
     #   p1 = (p1X, p1Y) etc
-    def DLine_mm(self, p1, p2, st_color, width=3):
-        p1_px = self.XYmm2RC( p1[0], p1[1])
-        p2_px = self.XYmm2RC( p2[0], p2[1])
+    def DLine_mm(self, p1xy, p2xy, st_color, width=3):
+        print('Drawing line from ',p1xy, 'mm  to ', p2xy, 'mm')
+        p1_px = self.XYmm2RC( p1xy[0], p1xy[1])
+        p2_px = self.XYmm2RC( p2xy[0], p2xy[1])
         print('Drawing line from ',p1_px, ' to ', p2_px)
         cv2.line(self.image, p1_px, p2_px, bpar.colors[st_color], width)
         
     def DRect_mm(self,  p1, p2, st_color, width=3):
-        p1_px = self.XYmm2RC( p1[1], p1[0])
-        p2_px = self.XYmm2RC( p2[1], p2[0])
+        p1_px = self.XYmm2RC( p1[0], p1[1])
+        p2_px = self.XYmm2RC( p2[0], p2[1])
         cv2.rectangle(self.image, p1_px, p2_px, bpar.colors[st_color], width)
         
     def DLine_px(self, p1, p2, st_color, width=3):
-        cv2.line(self.image, p1, p2, bpar.colors[st_color], width)
+        p1r = (p1[1],p1[0])
+        p2r = (p2[1],p2[0])
+        cv2.line(self.image, p1r, p2r, bpar.colors[st_color], width)
 
+        
+    def DRect_px(self, p1, p2, st_color, width=3):
+        p1r = (p1[1],p1[0])
+        p2r = (p2[1],p2[0])
+        cv2.rectangle(self.image, p1r, p2r, bpar.colors[st_color], width)
+
+def approx(a,b):
+    if abs(a-b) < 0.0001:
+        return True
+    else:
+        return False
         
 if __name__=='__main__':
     
@@ -91,26 +112,67 @@ if __name__=='__main__':
         #
         #img = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
         img_orig = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
-        ish = img_orig.shape
         tsti = img_orig.copy()  # copy of original for visualization 
 
         sh = img_orig.shape
         print('Original:   {:} rows, {:} cols.'.format(sh[0],sh[1]))
         
         #Instantiate
-        tim1 = bookImage(img_orig, 5.0)   # 5mm/pixel
+        pixels_per_mm = 5.0
+        tim1 = bookImage(img_orig, 1/pixels_per_mm)   # mm/pixel
         
         sh2 = tim1.ishape()
         assert sh == sh2, 'shape method FAILS'
+        
+        
+        ## #  converting tests
+        
+        ##   TEST mm to row,col
+        #print('Converted value of XY=( 0.0, 0.0)mm is', tim1.XYmm2RC( 0.0,  0.0))
+        #print('Converted value of XY=(50.0,25.0)mm is', tim1.XYmm2RC( 50.0,25.0))
+        fs = 'mm to pixel conversion ERROR'
+        assert tim1.XYmm2RC( 0.0,  0.0) == (544,810), fs
+        assert tim1.XYmm2RC( 50.0,25.0) == (419,1060), fs
+        
+        ##  TEST row,col to mm
+        
+        print('Converted value of ', int(tim1.rows/2), int(tim1.cols/2),' is ', tim1.RC2XYmm(tim1.rows/2,tim1.cols/2))
+        fs = 'pixel to mm conversion ERROR'
+        x = tim1.RC2XYmm(tim1.rows/2,tim1.cols/2)
+        assert approx(x[0],0.0), fs
+        assert approx(x[1],0.0), fs
+        
+        x = tim1.RC2XYmm(tim1.rows/2+10,tim1.cols/2+20)
+        #print(' 10, 20 px more: ', x)
+        assert approx(x[0],  4), fs
+        assert approx(x[1], -2), fs
         
         #
         #   test drawing
         #
         
-        # line
-        #tim1.DLine_mm( (0,0), (25,25), 'green')
-        tim1.DLine_px( (0,0), (1620,1089),'red')
-        #tim1.DRect_mm( (0,0), (25,25), 'blue')
+        # pixel line from one corner (almost) to the other
+        tim1.DLine_px( (10,10), (1079,1610),'red')
+        
+        tim1.DLine_px( (544,810), (544-250,810+125), 'white')
+        # pixel line from origin to +x and +y values
+        tim1.DLine_mm( (0,0), (50,25), 'green')
+            
+        
+        if False:# line
+            rS2 = 25/2.0
+            tim1.DRect_mm( (-rS2,-rS2), (rS2,rS2), 'blue')
+            
+            
+            #1089 rows, 1620 cols.
+            rS2px = 3
+            rowctr = int(1089/2)
+            assert rowctr == int(sh[0]/2)
+            colctr = int(1620/2)
+            assert colctr == int(sh[1]/2)
+            
+            tim1.DRect_px((rowctr-rS2px, colctr-rS2px),(rowctr+rS2px, colctr+rS2px),'white')
+        
         
         title='test image'
         cv2.imshow(title, tim1.image)
