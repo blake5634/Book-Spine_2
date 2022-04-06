@@ -9,6 +9,11 @@ from time import sleep
 #  Useful classes 
 #
 
+
+    
+def RC2PXY(rcTuple):  ##  OpenCV's confusing Point coords.
+    return (rcTuple[1],rcTuple[0])
+
 class bookImage():
     def __init__(self,img, mmPpx):
         self.scale = mmPpx # mm per pixel
@@ -42,12 +47,12 @@ class bookImage():
     def XYmm2RC(self,Xmm,Ymm):        
         row = int(self.rows/2  - Ymm/self.scale)
         col = int(self.cols/2  + Xmm/self.scale)
-        return row, col
+        return (row, col)
     
     def RC2XYmm(self,row,col):
         Xmm =   col*self.scale    - self.ctXmm
         Ymm =   -1*row*self.scale + self.ctYmm
-        return Xmm, Ymm
+        return (Xmm, Ymm)
         
     # create a new bookImage scaled down by factor
     def downvert(self, factor):
@@ -61,29 +66,30 @@ class bookImage():
             
     #  Draw a line/rect in mm coordinates
     #
-    #  if image scale is different from "scale" then use param
     #   p1 = (p1X, p1Y) etc
-    def DLine_mm(self, p1xy, p2xy, st_color, width=3):
-        print('Drawing line from ',p1xy, 'mm  to ', p2xy, 'mm')
-        p1_px = self.XYmm2RC( p1xy[0], p1xy[1])
+    #      NOTE:   drawing uses "Points()" not [row,col]!!!!!
+    def Dline_mm(self, p1xy, p2xy, st_color, width=3):
+        print('mmDrawing line from ',p1xy, 'mm  to ', p2xy, 'mm')
+        p1_px = self.XYmm2RC( p1xy[0], p1xy[1])  # Xmm, Ymm
         p2_px = self.XYmm2RC( p2xy[0], p2xy[1])
-        print('Drawing line from ',p1_px, ' to ', p2_px)
-        cv2.line(self.image, p1_px, p2_px, bpar.colors[st_color], width)
+        #point1 = 
+        print('mmDrawing line from ',p1_px, ' to ', p2_px)
+        cv2.line(self.image, RC2PXY(p1_px), RC2PXY(p2_px), bpar.colors[st_color], width)
         
     def DRect_mm(self,  p1, p2, st_color, width=3):
-        p1_px = self.XYmm2RC( p1[0], p1[1])
-        p2_px = self.XYmm2RC( p2[0], p2[1])
-        cv2.rectangle(self.image, p1_px, p2_px, bpar.colors[st_color], width)
+        p1_px = self.XYmm2RC( p1[1], p1[0])
+        p2_px = self.XYmm2RC( p2[1], p2[0])
+        cv2.rectangle(self.image, RC2PXY(p1_px), RC2PXY(p2_px), bpar.colors[st_color], width)
         
-    def DLine_px(self, p1, p2, st_color, width=3):
+    def Dline_px(self, p1, p2, st_color, width=3):
         p1r = (p1[1],p1[0])
         p2r = (p2[1],p2[0])
         cv2.line(self.image, p1r, p2r, bpar.colors[st_color], width)
 
         
     def DRect_px(self, p1, p2, st_color, width=3):
-        p1r = (p1[1],p1[0])
-        p2r = (p2[1],p2[0])
+        p1r = RC2PXY(p1)
+        p2r = RC2PXY(p2)
         cv2.rectangle(self.image, p1r, p2r, bpar.colors[st_color], width)
 
 def approx(a,b):
@@ -152,11 +158,28 @@ if __name__=='__main__':
         #
         
         # pixel line from one corner (almost) to the other
-        tim1.DLine_px( (10,10), (1079,1610),'red')
+        tim1.Dline_px( (10,10), (1079,1610),'red')
         
-        tim1.DLine_px( (544,810), (544-250,810+125), 'white')
+        # draw some test lines in px:
+        
+        for i in range(10):
+            r = 50*i
+            midpoint = int(tim1.cols/2)
+            p1 = (r,midpoint)
+            p2 = (r,midpoint+500)
+            tim1.Dline_px(p1,p2,'yellow',width=2)
+        
+        for i in range(10):
+            ymm = 100 - 50*tim1.scale*i
+            midpoint = 0.0
+            xmm = midpoint
+            p1 = (xmm,              ymm)
+            p2 = (xmm+500*tim1.scale, ymm)
+            tim1.Dline_mm(p1, p2,'white')
+        
+        tim1.Dline_px( (544,810), (544-250,810+125), 'white')
         # pixel line from origin to +x and +y values
-        tim1.DLine_mm( (0,0), (50,25), 'green')
+        tim1.Dline_mm( (0,0), (50,25), 'green')
             
         
         if False:# line
