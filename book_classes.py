@@ -20,7 +20,6 @@ class bookImage():
         self.image = img
         self.ishape()
         # validate image type here
-        
     
     def ishape(self):        
         sh = self.image.shape
@@ -91,6 +90,13 @@ class bookImage():
         p1r = RC2PXY(p1)
         p2r = RC2PXY(p2)
         cv2.rectangle(self.image, p1r, p2r, bpar.colors[st_color], width)
+        
+    def copy(self):
+        tmp = self() 
+        tmp.image = self.image
+        tmp.scale = self.scale
+        tmp.ishape()
+        return tmp
 
 def approx(a,b):
     if abs(a-b) < 0.0001:

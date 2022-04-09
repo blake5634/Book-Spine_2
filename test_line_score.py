@@ -6,6 +6,7 @@ import glob as gb
 from book_hough import *
 import newfcns as nf
 import book_parms as bpar
+import book_classes as bc
 import matplotlib.pyplot as plt
 '''
 Test some new functions for 
@@ -14,6 +15,7 @@ Find books in a bookshelf image
 
  **********  look for major lines at different angles
  
+ 4/22   adapt to use book_classes
 ''' 
  
 
@@ -33,19 +35,11 @@ for pic_filename in img_paths:
     #  read in the image
     #
     #img = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
-    img_orig = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
-    ish = img_orig.shape
+    img_orig = bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), 0.2) 
     tsti = img_orig.copy()  # copy of original for visualization 
 
-    sh = img_orig.shape
+    sh = img_orig.shape()
     print('Original:   {:} rows, {:} cols.'.format(sh[0],sh[1]))
-           
-    #############   
-    #
-    #  Standardize the image sizes/scales
-    #
-    
-    orig_ish, scaled_ish = nf.Get_sizes(img_orig, bpar.scale)
     
     #
     #
@@ -53,12 +47,14 @@ for pic_filename in img_paths:
     #
     #     scale factor imported from newfcns.py
     #
-        
-    img_width = scaled_ish[1]
-    img_height = scaled_ish[0] 
-    img1 = cv2.resize(img_orig, (img_width, img_height))
     
-    sh = img1.shape
+    img1 = img_orig.downvert(bpar.scale)
+        
+    #img_width = scaled_ish[1]
+    #img_height = scaled_ish[0] 
+    #img1 = cv2.resize(img_orig, (img_width, img_height))
+    
+    sh = img1.shape()
     print('Scaled:    {:} rows, {:} cols.'.format(sh[0],sh[1]))        
         
     ############
@@ -69,8 +65,10 @@ for pic_filename in img_paths:
     b = int(bpar.blur_rad/bpar.scale)
     if b%2 == 0:
         b+=1
-    img2 = cv2.GaussianBlur(img1, (b,b), 0)
         
+    tmp = cv2.GaussianBlur(img1, (b,b), 0)
+    img2 = bookImage(tmp,bpar.scale)
+
 
     ############
     #
