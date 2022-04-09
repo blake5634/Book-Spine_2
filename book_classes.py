@@ -98,6 +98,9 @@ def approx(a,b):
     else:
         return False
         
+        
+        
+        
 if __name__=='__main__':
     
     print('\n\n                  Testing bookImage class \n\n')
