@@ -9,7 +9,7 @@ from time import sleep
 #  new functions by BH
 #
 ##
-
+d2r = 2*np.pi/360.0
 
 ##s
 # Convert XY rel LL corner to row, col
@@ -122,8 +122,15 @@ def Get_line_params(th, xintercept, llength,w=None):
     d = {}
     d['th'] = th
     d['xintercept'] = xintercept
-    d['m0'] = np.tan(th*bpar.d2r) # slope (mm/mm)
+    d['m0'] = np.tan(th*d2r) # slope (mm/mm)
     d['b0'] = -d['m0']*xintercept  # mm
+    
+    
+    # compute xmin and xmax
+    x_line_len_mm = abs((llength)*np.cos(th*d2r)) # mm
+
+    d['xmin'] = xintercept - x_line_len_mm/2.0
+    d['xmax'] = xintercept + x_line_len_mm/2.0
 
     #  window upper bound (window width (mm) is perp to line but we need to go straight up)
     #  rV = distance to upper bound (vertical) mm
@@ -135,6 +142,7 @@ def Get_line_params(th, xintercept, llength,w=None):
             tmp = 2
         d['rVp'] = tmp
          
+    d['ybias_mm'] = -d['b0']/d['m0']  # y intercept
     return d
 #
 #
@@ -148,6 +156,8 @@ def Get_line_params(th, xintercept, llength,w=None):
 #   4) find dominant color label on either side of line- look for uniformity
 #
 #   NEW:   All coordinates and radii etc are in mm 
+
+#   TODO:  just pass a line dictionary from Get_line_params
 def Get_line_score(img, w, xintercept, th, llen,bias, cdist):
     '''
     img = image (already scaled)
@@ -170,20 +180,11 @@ def Get_line_score(img, w, xintercept, th, llen,bias, cdist):
     m0 = ld['m0'] # slope (mm/mm)
     b0 = ld['b0']  # mm
     rV = ld['rV']
-    rVp = ld['rVp']
+    rVp = ld['rVp'] 
      
-    #print('GLP: m0: {} b0: {}mm '.format(m0,b0))
-    #print('GLP: rV(mm): {:5.2f}'.format(rV))
-    #print('GLP: rVp(px): {:}'.format(rVp))
-    #print('GLP: scale: {:}'.format(bpar.scale))
-    #print('GLP: effective mm per pixel {:5.2}'.format(rV/rVp))
-    #print('GLP: th: {} deg, img_width_cols {}  img_height_rows: {}'.format(th,img_width_cols,img_height_rows))
     
-    # x component projection of this line, mm
-    x_line_len_mm = abs((llen)*np.cos(th*bpar.d2r)) # mm
-    
-    xmin2 = xintercept - x_line_len_mm/2.0 #mm    X range for test line
-    xmax2 = xintercept + x_line_len_mm/2.0 #mm
+    xmin2 = ld['xmin'] #mm    X range for test line
+    xmax2 = ld['xmax'] #mm
     #print('xmin/max2: {:4.2f}mm {:4.2f}mm'.format(xmin2,xmax2))
     # cols,  rows = XY2iXiY()
     xmin_px, dummy =XY2iXiY(img, xmin2,0)  # pix  X range for test line
@@ -263,7 +264,7 @@ def Get_line_score(img, w, xintercept, th, llen,bias, cdist):
         diff_score = color_distance/(dom_abv*dom_bel)  # weighted difference (smaller is better!)
     else:
         #x = input('\n\n\n[enter] to continue (0)')
-        return 0.0
+        return 99999999999  # a really really bad score
     
     #x = input('\n\n\n[enter] to continue ({:5.2f})'.format(diff_score))
     return diff_score

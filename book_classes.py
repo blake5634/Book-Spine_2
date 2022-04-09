@@ -83,6 +83,13 @@ class bookImage():
         p2_px = self.XYmm2RC( p2xy[0], p2xy[1])
         cv2.line(self.image, RC2PXY(p1_px), RC2PXY(p2_px), bpar.colors[st_color], width)
         
+        
+    def Dline_ld(self,ld,color):
+        p1 = (ld['xmin'], ld['m0']*ld['xmin'] + ld['b0'])
+        p2 = (ld['xmax'], ld['m0']*ld['xmax'] + ld['b0'])
+        self.Dline_mm(p1,p2,color)
+        
+        
     def DRect_mm(self,  p1, p2, st_color, width=3):
         p1_px = self.XYmm2RC( p1[1], p1[0])
         p2_px = self.XYmm2RC( p2[1], p2[0])
