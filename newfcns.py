@@ -36,8 +36,8 @@ from time import sleep
 def Get_pix_byXY(img,X,Y,iscale=bpar.scale):
     #print('Get: {} {}'.format(X,Y))
     row,col = XY2RC(img,X,Y,iscale==iscale)
-    if col > 500:
-        print('  Get_pix_byXY() X:{} Y:{} r:{} c:{}'.format(X,Y,row,col))
+    #if col > 500:
+        #print('  Get_pix_byXY() X:{} Y:{} r:{} c:{}'.format(X,Y,row,col))
     return(img[row,col])
 
 def Get_pix_byRC(img,row,col):
@@ -172,12 +172,12 @@ def Get_line_score(img, w, xintercept, th, llen,bias, cdist):
     rV = ld['rV']
     rVp = ld['rVp']
      
-    print('GLP: m0: {} b0: {}mm '.format(m0,b0))
-    print('GLP: rV(mm): {:5.2f}'.format(rV))
-    print('GLP: rVp(px): {:}'.format(rVp))
-    print('GLP: scale: {:}'.format(bpar.scale))
-    print('GLP: effective mm per pixel {:5.2}'.format(rV/rVp))
-    print('GLP: th: {} deg, img_width_cols {}  img_height_rows: {}'.format(th,img_width_cols,img_height_rows))
+    #print('GLP: m0: {} b0: {}mm '.format(m0,b0))
+    #print('GLP: rV(mm): {:5.2f}'.format(rV))
+    #print('GLP: rVp(px): {:}'.format(rVp))
+    #print('GLP: scale: {:}'.format(bpar.scale))
+    #print('GLP: effective mm per pixel {:5.2}'.format(rV/rVp))
+    #print('GLP: th: {} deg, img_width_cols {}  img_height_rows: {}'.format(th,img_width_cols,img_height_rows))
     
     # x component projection of this line, mm
     x_line_len_mm = abs((llen)*np.cos(th*bpar.d2r)) # mm
@@ -201,21 +201,13 @@ def Get_line_score(img, w, xintercept, th, llen,bias, cdist):
     ncolsLine = 0
     nvals_app = 0 
     for col in xrange_px:  # for each x-value, go vertically above & below line.
-        #print('\n\n============================================================')
         ncolsLine += 1
-        print('            col ',col)
-        #if (col > img_width_cols-1):
-            #print('image boundaries exceeded:')
-            #print('width:  {} cols'.format(img_width_cols))
-            #print('height: {} rows'.format(img_height_rows))
-            #quit()
         x = bpar.pix2mm*(col - img_width_cols/2) # convert back to mm(!)
         ymm = m0*x+b0 + bias    # line eqn in mm
         row, dummy = XY2RC(img,0,ymm)    # pix
         #print ('X/col:{} Ymm:{:4.2f} row:{}'.format(col,ymm,row))
         if not ((row > img_height_rows-1 or row < 0) or (col > img_width_cols-1 or col < 0)): # line inside image?
             # above the line
-            print('GLP: about to scan rows: {:} to {:}'.format(row, row-rVp))
             for row1 in range(row,row-rVp,-1): # higher rows #s are "lower"
                 if  row1 > 0:
                     #print('            Looking at (above): {}, {}'.format(row1,col))
@@ -230,9 +222,6 @@ def Get_line_score(img, w, xintercept, th, llen,bias, cdist):
                     vals_bel.append(img[row1,col])
                     nvals_app+=1
                 
-    print('\n\nGLP: {} values above'.format(len(vals_abv)))
-    print('GLP: {} values below'.format(len(vals_bel)))
-    print('GLP: {:} vals appended in {:} cols examined.'.format(nvals_app,ncolsLine))
     
     #
     #  If we got enough pixels in our window for meaningful result:
@@ -247,21 +236,22 @@ def Get_line_score(img, w, xintercept, th, llen,bias, cdist):
         #print('labels above, below: (1st 100 samples)')
         #print(vals_abv[0:100], vals_bel[0:100])
         
-        print('GLP: labels above: ', labs_abv)
-        print('GLP: counts above: ', cnts_abv)
-        print('GLP: labels below: ', labs_bel)
-        print('GLP: counts below: ', cnts_bel)
+        #print('GLP: labels above: ', labs_abv)
+        #print('GLP: counts above: ', cnts_abv)
+        #print('GLP: labels below: ', labs_bel)
+        #print('GLP: counts below: ', cnts_bel)
         
         dom_lab_abv = labs_abv[np.argmax(cnts_abv)]   # which is most common label above?
         dom_lab_bel = labs_bel[np.argmax(cnts_bel)]
         dom_abv = np.max(cnts_abv)/np.sum(cnts_abv)  # how predominant? (0-1)
         dom_bel = np.max(cnts_bel)/np.sum(cnts_bel)  # how predominant? (0-1)
         
-        print('GLP: Dominant labels: above: {} below: {}'.format(dom_lab_abv,dom_lab_bel))
+        print('\n\nGLP: Dominant labels: above: {:5} below: {:5}'.format(dom_lab_abv,dom_lab_bel))
+        print('GLP: Dominance:       above: {:5.3f} below: {:5.3f}\n\n'.format(dom_abv,dom_bel))
         # is the dominant color above line == dom color below?
         Method = bpar.Color_Dist_Method
         if Method == 1:
-            color_distance = cdist[dom_lab_abv, dom_lab_bel]
+            color_distance = 0.01* cdist[dom_lab_abv, dom_lab_bel] + 0.1  # keep non zero
         elif Method == 2:
             if dom_lab_abv != dom_lab_bel:
                 color_distance = 150    # to match typical color distances
@@ -270,7 +260,7 @@ def Get_line_score(img, w, xintercept, th, llen,bias, cdist):
         else:
             print('GLP: Illegal color Distance Method (1 or 2)')
             quit()
-        diff_score = color_distance*dom_abv*dom_bel  # weighted difference (smaller is better!)
+        diff_score = color_distance/(dom_abv*dom_bel)  # weighted difference (smaller is better!)
     else:
         #x = input('\n\n\n[enter] to continue (0)')
         return 0.0

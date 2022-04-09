@@ -21,7 +21,8 @@ Find books in a bookshelf image
  
 
 #img_paths = gb.glob('tiny/target.jpg')
-img_paths = gb.glob('tiny/testimage2.png')
+#img_paths = gb.glob('tiny/testimage2.png')   # simplified 
+img_paths = gb.glob('tiny/target.jpg')       # actual
 d2r = 2*np.pi/360.0  #deg to rad
 
 if (len(img_paths) < 1):
@@ -109,35 +110,48 @@ for pic_filename in img_paths:
     
     ###################################################################   Test Line 
     # make up a line       y = m0*x + b0
-    xintercept = -5.0 #mm              
-    th = 135   # deg relative to 03:00 (clock)
-    ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , bpar.slice_width)  #llen=80, w=10
+    
+    xintercept = -80 #mm        
+    ybias_mm = bpar.row_bias_mm
+    ybias_mm = 20
     
     
-    # get the score
-    lscore = nf.Get_line_score(label_img.image, bpar.slice_width, xintercept, th, bpar.book_edge_line_length_mm, bpar.row_bias_mm, color_dist)  # x=0, th=125deg
-    
-    print('X: {} th: {} score: {}'.format(xintercept, th, lscore))        
-     
-    #
-    #   Draw the testing line and bounds 
-    #
-  
-    #print('m0: {} b0: {}mm rp:{}(pix)'.format(m0,b0,rp))
-    #print('th: {} deg, iw {}  ih: {}'.format(th,iw,ih))
-    dx = abs((bpar.book_edge_line_length_mm/2)*np.cos(th*d2r)) # mm
-    xmin2 = xintercept - dx  #mm    X range for test line
-    xmax2 = xintercept + dx  #mm
-    colcode = 'yellow'
+    for th in range(120, 200 , 10):
+    #th = 140  # deg relative to 03:00 (clock)
         
+        
+        ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , bpar.slice_width)  #llen=80, w=10
+        
+        
+        
+        # get the score
+        lscore = nf.Get_line_score(label_img.image, bpar.slice_width, xintercept, th, bpar.book_edge_line_length_mm, ybias_mm, color_dist)  # x=0, th=125deg
+        
+        print('X: {} th: {} score: {}'.format(xintercept, th, lscore))        
+        
+        #
+        #   Draw the testing line and bounds 
+        # 
+        dx = abs((bpar.book_edge_line_length_mm/2)*np.cos(th*d2r)) # mm
+        xmin2 = xintercept - dx  #mm    X range for test line
+        xmax2 = xintercept + dx  #mm
+        colcode = 'yellow'
+        
+        if lscore < 0.2:
+            colcode = 'red'
+        elif lscore < 0.35:
+            colcode = 'green'
+        elif lscore < 0.5:
+            colcode = 'white'
+            
 
-    # new line draw feature of bookImage class!
-    label_img.Dline_mm( (xmin2, bpar.row_bias_mm + ld['m0']*xmin2+ld['b0']), (xmax2, bpar.row_bias_mm + ld['m0']*xmax2+ld['b0']), colcode)
-    ## above window line
-    #nf.Dline_mm(tsti, (xmin2,  rV + m0*xmin2+b0), (xmax2,  rV + m0*xmax2+b0), 'blue')
-    #nf.Dline_mm(tsti, (xmin2, -rV + m0*xmin2+b0), (xmax2, -rV + m0*xmax2+b0), 'green')
-     
-    
+        # new line draw feature of bookImage class!
+        tsti.Dline_mm( (xmin2, ybias_mm + ld['m0']*xmin2+ld['b0']), (xmax2, ybias_mm + ld['m0']*xmax2+ld['b0']), colcode)
+        ## above window line
+        #nf.Dline_mm(tsti, (xmin2,  rV + m0*xmin2+b0), (xmax2,  rV + m0*xmax2+b0), 'blue')
+        #nf.Dline_mm(tsti, (xmin2, -rV + m0*xmin2+b0), (xmax2, -rV + m0*xmax2+b0), 'green')
+        
+        
     sh = tsti.ishape()
     print('Output(tsti):  {:} rows, {:} cols.'.format(sh[0],sh[1]))    
   
@@ -148,8 +162,13 @@ for pic_filename in img_paths:
     tsti.Dxy_axes()
         
         
-    tsti.Dmidline()
+    #draw the "ybias_mm" line
+    (xmin, xmax, ymin, ymax) = tsti.Get_mmBounds()
+    ## Draw the effective midpoint in Y (row_bias_mm)
+    tsti.Dline_mm((xmin+20,ybias_mm), (xmax-20,ybias_mm), 'red')
+
 
     title='test image'
     cv2.imshow(title, tsti.image)
-    cv2.waitKey(5000)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()

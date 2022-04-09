@@ -118,11 +118,6 @@ class bookImage():
         for x in tick_locs_mm:
             self.Dline_mm((x, ya), (x,yb), 'green')   # draw the tick marks
             
-    def Dmidline(self):   # effective midline after "bais" wrt 0
-        (xmin, xmax, ymin, ymax) = self.Get_mmBounds()
-        ## Draw the effective midpoint in Y (row_bias_mm)
-        self.Dline_mm((xmin+20,bpar.row_bias_mm), (xmax-20,bpar.row_bias_mm), 'red')
-
 def approx(a,b):
     if abs(a-b) < 0.0001:
         return True
