@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import glob as gb
+import copy as cp
 import book_parms as bpar
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,6 +21,9 @@ class bookImage():
         self.image = img
         self.ishape()
         # validate image type here
+        
+    def copy(self):
+        return cp.copy(self)
     
     def ishape(self):        
         sh = self.image.shape
@@ -56,23 +60,27 @@ class bookImage():
     # create a new bookImage scaled down by factor
     def downvert(self, factor):
         tmp = self.copy()
-        sh = tmp.shape()
+        sh = tmp.ishape()
         img_width  = int(sh[1] / factor)
         img_height = int(sh[0] / factor)
         tmp.image = cv2.resize(tmp.image, (img_width, img_height))
         tmp.scale = self.scale * factor
         return tmp
+    
+    def Get_mmBounds(self):
+        xmin = -self.width_mm/2
+        ymin = -self.height_mm/2
+        xmax = self.width_mm/2
+        ymax = self.height_mm/2
+        return (xmin, xmax, ymin, ymax)
             
     #  Draw a line/rect in mm coordinates
     #
     #   p1 = (p1X, p1Y) etc
     #      NOTE:   drawing uses "Points()" not [row,col]!!!!!
     def Dline_mm(self, p1xy, p2xy, st_color, width=3):
-        print('mmDrawing line from ',p1xy, 'mm  to ', p2xy, 'mm')
         p1_px = self.XYmm2RC( p1xy[0], p1xy[1])  # Xmm, Ymm
         p2_px = self.XYmm2RC( p2xy[0], p2xy[1])
-        #point1 = 
-        print('mmDrawing line from ',p1_px, ' to ', p2_px)
         cv2.line(self.image, RC2PXY(p1_px), RC2PXY(p2_px), bpar.colors[st_color], width)
         
     def DRect_mm(self,  p1, p2, st_color, width=3):
@@ -90,13 +98,30 @@ class bookImage():
         p1r = RC2PXY(p1)
         p2r = RC2PXY(p2)
         cv2.rectangle(self.image, p1r, p2r, bpar.colors[st_color], width)
-        
-    def copy(self):
-        tmp = self() 
-        tmp.image = self.image
-        tmp.scale = self.scale
-        tmp.ishape()
-        return tmp
+         
+    def Dxy_axes(self):
+         # Draw H and V axes (X,Y axes in mm)    
+        (xmin, xmax, ymin, ymax) = self.Get_mmBounds()
+
+        self.Dline_mm((xmin,0), (xmax,0),'white')
+        self.Dline_mm((0, ymin), (0, ymax), 'white')
+
+        ## Draw some tick marks
+        tick_locs_mm = [] # pix
+        tickwidth = 20 # mm
+        for xt in range(int(xmax/tickwidth)): # unitless
+            xpt = tickwidth*(xt+1)  # mm
+            tick_locs_mm.append(xpt)
+            tick_locs_mm.append(-xpt)
+        ya = 0.0 #mm
+        yb = -5.0 #mm
+        for x in tick_locs_mm:
+            self.Dline_mm((x, ya), (x,yb), 'green')   # draw the tick marks
+            
+    def Dmidline(self):   # effective midline after "bais" wrt 0
+        (xmin, xmax, ymin, ymax) = self.Get_mmBounds()
+        ## Draw the effective midpoint in Y (row_bias_mm)
+        self.Dline_mm((xmin+20,bpar.row_bias_mm), (xmax-20,bpar.row_bias_mm), 'red')
 
 def approx(a,b):
     if abs(a-b) < 0.0001:

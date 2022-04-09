@@ -36,10 +36,10 @@ for pic_filename in img_paths:
     #  read in the image
     #
     #img = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
-    img_orig = bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), 0.2) 
+    img_orig = bc.bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), 0.2) 
     tsti = img_orig.copy()  # copy of original for visualization 
 
-    sh = img_orig.shape()
+    sh = img_orig.ishape()
     print('Original:   {:} rows, {:} cols.'.format(sh[0],sh[1]))
     
     #
@@ -55,7 +55,7 @@ for pic_filename in img_paths:
     #img_height = scaled_ish[0] 
     #img1 = cv2.resize(img_orig, (img_width, img_height))
     
-    sh = img1.shape()
+    sh = img1.ishape()
     print('Scaled:    {:} rows, {:} cols.'.format(sh[0],sh[1]))        
         
     ############
@@ -67,8 +67,8 @@ for pic_filename in img_paths:
     if b%2 == 0:
         b+=1
         
-    tmp = cv2.GaussianBlur(img1, (b,b), 0)
-    img2 = bookImage(tmp,bpar.scale)
+    tmp = cv2.GaussianBlur(img1.image, (b,b), 0)
+    img2 = bc.bookImage(tmp,bpar.scale)
 
 
     ############
@@ -77,7 +77,7 @@ for pic_filename in img_paths:
     #
     N = bpar.KM_Clusters
     img0, tmp, ctrs, color_dist = nf.KM(img2.image,N)   
-    label_img.image = bc.bookImage(tmp,img2.scale)
+    label_img = bc.bookImage(tmp,img2.scale)
     #print('label_img.image shape: {}'.format(np.shape(label_img.image)))
     #cv2.imshow("labeled KM image", img0)
     
@@ -88,7 +88,7 @@ for pic_filename in img_paths:
     nfound = 0
     
     
-    sh = label_img.image.shape()   # new class uses shape()
+    sh = label_img.ishape()   # new class uses shape()
     print('Labeled:  {:} rows, {:} cols.'.format(sh[0],sh[1])) 
     
     #
@@ -99,7 +99,7 @@ for pic_filename in img_paths:
     #
     #  look for lines at a bunch of x-values
     #
-     xwidth = 81
+    xwidth = 81
     linescanx_mm = range(xwidth,-xwidth, -2) #mm
     dth = 15 # degrees off of 135
     ang_scan_deg = range(135-dth, 135+dth,2)  # deg 
@@ -132,41 +132,24 @@ for pic_filename in img_paths:
         
 
     # new line draw feature of bookImage class!
-    label_img.DLine_mm( (xmin2, bpar.row_bias_mm + ld['m0']*xmin2+ld['b0']), (xmax2, bpar.row_bias_mm + ld['m0']*xmax2+ld['b0']), colcode)
+    label_img.Dline_mm( (xmin2, bpar.row_bias_mm + ld['m0']*xmin2+ld['b0']), (xmax2, bpar.row_bias_mm + ld['m0']*xmax2+ld['b0']), colcode)
     ## above window line
-    #nf.DLine_mm(tsti, (xmin2,  rV + m0*xmin2+b0), (xmax2,  rV + m0*xmax2+b0), 'blue',iscale=tstscale)
-    #nf.DLine_mm(tsti, (xmin2, -rV + m0*xmin2+b0), (xmax2, -rV + m0*xmax2+b0), 'green',iscale=tstscale)
+    #nf.Dline_mm(tsti, (xmin2,  rV + m0*xmin2+b0), (xmax2,  rV + m0*xmax2+b0), 'blue')
+    #nf.Dline_mm(tsti, (xmin2, -rV + m0*xmin2+b0), (xmax2, -rV + m0*xmax2+b0), 'green')
      
     
-    sh = tsti.shape
+    sh = tsti.ishape()
     print('Output(tsti):  {:} rows, {:} cols.'.format(sh[0],sh[1]))    
   
     ###################################################################3
     #
     #  Draw some debugging graphics          TODO:   move this inside bookImage()
     #
-    # Draw H and V axes (X,Y axes in mm)    
-    (xmin, xmax, ymin, ymax) = nf.Get_mmBounds(tsti)
-
-    tstscale = bpar.scale
-    nf.DLine_mm(tsti, (xmin,0), (xmax,0),'white',iscale=tstscale)
-    nf.DLine_mm(tsti, (0, ymin), (0, ymax), 'white',iscale=tstscale)
-
-    ## Draw some tick marks
-    tick_locs_mm = [] # pix
-    tickwidth = 20 * bpar.scale# mm
-    for xt in range(int(xmax/tickwidth)): # unitless
-        xpt = tickwidth*(xt+1)  # mm
-        tick_locs_mm.append(xpt)
-        tick_locs_mm.append(-xpt)
-    ya = 0.0 #mm
-    yb = -5.0 #mm
-    for x in tick_locs_mm:
-        nf.DLine_mm(tsti, (x, ya), (x,yb), 'green',iscale=tstscale)   # draw the tick marks
+    tsti.Dxy_axes()
         
-    ## Draw the effective midpoint in Y (row_bias_mm)
-    nf.DLine_mm(tsti, (xmin+20,bpar.row_bias_mm), (xmax-20,bpar.row_bias_mm), 'green', iscale=tstscale)
+        
+    tsti.Dmidline()
 
     title='test image'
-    cv2.imshow(title, tsti)
-    cv2.waitKey(-1)
+    cv2.imshow(title, tsti.image)
+    cv2.waitKey(5000)
