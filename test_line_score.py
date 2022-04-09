@@ -5,6 +5,7 @@ import time as time
 import glob as gb
 from book_hough import *
 import newfcns as nf
+import book_classes as bc
 import book_parms as bpar
 import book_classes as bc
 import matplotlib.pyplot as plt
@@ -75,8 +76,9 @@ for pic_filename in img_paths:
     #  Use KMeans to posterize to N color labels
     #
     N = bpar.KM_Clusters
-    img0, label_img, ctrs, color_dist = nf.KM(img2,N)   
-    #print('label_img shape: {}'.format(np.shape(label_img)))
+    img0, tmp, ctrs, color_dist = nf.KM(img2.image,N)   
+    label_img.image = bc.bookImage(tmp,img2.scale)
+    #print('label_img.image shape: {}'.format(np.shape(label_img.image)))
     #cv2.imshow("labeled KM image", img0)
     
     imct = nf.Gen_cluster_colors(ctrs)
@@ -86,19 +88,18 @@ for pic_filename in img_paths:
     nfound = 0
     
     
-    sh = label_img.shape
+    sh = label_img.image.shape()   # new class uses shape()
     print('Labeled:  {:} rows, {:} cols.'.format(sh[0],sh[1])) 
     
     #
     #   Find background label
     #
-    backgnd = nf.Check_background(label_img)    
+    backgnd = nf.Check_background(label_img.image)    
     
     #
     #  look for lines at a bunch of x-values
     #
- 
-    xwidth = 81
+     xwidth = 81
     linescanx_mm = range(xwidth,-xwidth, -2) #mm
     dth = 15 # degrees off of 135
     ang_scan_deg = range(135-dth, 135+dth,2)  # deg 
@@ -114,7 +115,7 @@ for pic_filename in img_paths:
     
     
     # get the score
-    lscore = nf.Get_line_score(label_img, bpar.slice_width, xintercept, th, bpar.book_edge_line_length_mm, bpar.row_bias_mm, color_dist)  # x=0, th=125deg
+    lscore = nf.Get_line_score(label_img.image, bpar.slice_width, xintercept, th, bpar.book_edge_line_length_mm, bpar.row_bias_mm, color_dist)  # x=0, th=125deg
     
     print('X: {} th: {} score: {}'.format(xintercept, th, lscore))        
      
@@ -130,47 +131,19 @@ for pic_filename in img_paths:
     colcode = 'yellow'
         
 
-
-    #nf.DLine_mm(tsti, (xmin2, bpar.row_bias_mm + m0*xmin2+b0), (xmax2, bpar.row_bias_mm + m0*xmax2+b0), colcode,iscale=tstscale)
+    # new line draw feature of bookImage class!
+    label_img.DLine_mm( (xmin2, bpar.row_bias_mm + ld['m0']*xmin2+ld['b0']), (xmax2, bpar.row_bias_mm + ld['m0']*xmax2+ld['b0']), colcode)
     ## above window line
     #nf.DLine_mm(tsti, (xmin2,  rV + m0*xmin2+b0), (xmax2,  rV + m0*xmax2+b0), 'blue',iscale=tstscale)
     #nf.DLine_mm(tsti, (xmin2, -rV + m0*xmin2+b0), (xmax2, -rV + m0*xmax2+b0), 'green',iscale=tstscale)
-    
-    if True:
-        # Draw the line for debugging 
-        x = xintercept
-        dispscale = 1.0  # tsti is unscaled
-        dx = abs((bpar.book_edge_line_length_mm/2)*np.cos(th*d2r))  #mm
-        xa, ya = nf.XY2iXiY(tsti, x-dx, ld['m0']*(x-dx)+ld['b0'], dispscale)  # parms in mm
-        xb, yb = nf.XY2iXiY(tsti, x+dx, ld['m0']*(x+dx)+ld['b0'], dispscale)
-        print('Image shape: {}'.format(np.shape(tsti)))
-        print('pt a: {},{},  pt b: {},{}'.format(xa,ya,xb,yb))
-        ir = np.shape(tsti)[0]  # image rows
-        ic = np.shape(tsti)[1]  # image cols
-        
-        # equation line
-        cv2.line(tsti, (xa,ya), (xb,yb), (255,255,255), 3)
-
-        # line window border lines
-        r = int((bpar.scale/dispscale)*bpar.mm2pix*bpar.slice_width/np.cos((180-th)*d2r))  # pix
-        ya += r
-        yb += r
-        cv2.line(tsti, (xa,ya), (xb,yb), (255,0,0), 2)
-        ya -= 2*r
-        yb -= 2*r
-        cv2.line(tsti, (xa,ya), (xb,yb), (255,0,0), 2)
-
-        #draw a test rectangle
-        cv2.rectangle(tsti, (215,286), (425,496),(200,200,200), 3)
-    
-  
+     
     
     sh = tsti.shape
     print('Output(tsti):  {:} rows, {:} cols.'.format(sh[0],sh[1]))    
   
     ###################################################################3
     #
-    #  Draw some debugging graphics
+    #  Draw some debugging graphics          TODO:   move this inside bookImage()
     #
     # Draw H and V axes (X,Y axes in mm)    
     (xmin, xmax, ymin, ymax) = nf.Get_mmBounds(tsti)
