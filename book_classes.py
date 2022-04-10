@@ -87,16 +87,22 @@ class bookImage():
     def Dline_ld(self,ld,color):  # draw line based on line dict params
         p1 = (ld['xmin'], ld['m0']*ld['xmin'] + ld['b0'] + ld['ybias'])
         p2 = (ld['xmax'], ld['m0']*ld['xmax'] + ld['b0'] + ld['ybias'])
-        print('P1: ', p1)
-        print('P2: ', p2)
-        print('ld: ', ld)
+        
         self.Dline_mm(p1,p2,color)
         
         
     def DRect_mm(self,  p1, p2, st_color, width=3):
-        p1_px = self.XYmm2RC( p1[1], p1[0])
-        p2_px = self.XYmm2RC( p2[1], p2[0])
+        p1_px = self.XYmm2RC(p1[0], p1[1])
+        p2_px = self.XYmm2RC(p2[0], p2[1])
         cv2.rectangle(self.image, RC2PXY(p1_px), RC2PXY(p2_px), bpar.colors[st_color], width)
+        
+    # draw a square to mark a spot centered on p1
+    def DMark_mm(self, p1, side, color):
+        #side = square side length in mm 
+        # get corners of square
+        ps1 = ( p1[0] - side/2, p1[1] - side/2 ) 
+        ps2 = ( p1[0] + side/2, p1[1] + side/2  )
+        self.DRect_mm(ps1,ps2,color)
         
     def Dline_px(self, p1, p2, st_color, width=3):
         p1r = (p1[1],p1[0])
@@ -195,6 +201,17 @@ if __name__=='__main__':
         #
         #   test drawing
         #
+        
+        # Place marks in right places:
+        
+        tim1.DMark_mm((  0.0, 0.0), 2, 'red')
+        tim1.DMark_mm(( 10.0, 0.0), 2, 'red')
+        tim1.DMark_mm(( 20.0,10.0), 2, 'red')
+        tim1.DMark_mm(( -10.0,-50.0), 2, 'red')
+        
+        # test rectangle drawing
+        #  (should be predominantly horizontal)
+        tim1.DRect_mm( (-80,-20), (-10,-10), 'green')
         
         # pixel line from one corner (almost) to the other
         tim1.Dline_px( (10,10), (1079,1610),'red')

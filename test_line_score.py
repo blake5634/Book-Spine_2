@@ -110,19 +110,17 @@ for pic_filename in img_paths:
     ###################################################################   Test Line 
     # make up a line       y = m0*x + b0
     
-    xintercept = 20 #mm        
+    xintercept = 83 #mm        
     ybias_mm = bpar.row_bias_mm
-    ybias_mm = -20
+    ybias_mm = -12
     
     
-    for th in range(120, 200 , 10):
-    #th = 140  # deg relative to 03:00 (clock)
+    th = 145
+    if True: 
+    #for th in range(120, 200 , 10):
         
-        
-        
+        # get line params
         ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
-        
-        
         
         # get the score
         lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist)  # x=0, th=125deg

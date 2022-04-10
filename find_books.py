@@ -11,19 +11,17 @@ import book_parms as bpar
 
 def score2color(score):
     c = None
-    brackets = [0.175,   0.3,    .65,       1.0]
+    brackets = [0.1,   0.14,    .18,    .22]
     
-    scorescale = 0.2
+    scorescale = 1
     
     brackets = [y*scorescale  for y in brackets]
     colors  = ['red', 'green', 'yellow', 'white']
     for i,t in enumerate(brackets):
         if score < brackets[i]:
             c = colors[i]
-            return c
+            break
     return c
-    
-
     
 #img_paths = gb.glob('tiny/testimage2.png')
 img_paths = gb.glob('tiny/target.jpg')
@@ -113,10 +111,12 @@ for pic_filename in img_paths:
     scores = []
     lines  = []
     
-    for xintercept in range(-80,80,10):
-        for th in range(91, 190, 20):   # line angle
-            for ybias_mm in range(-40,40,10):
+    scanstep = 25
+    for xintercept in range(-80,80,scanstep):
+        for th in range(120, 160, 5):   # line angle
+            for ybias_mm in range(-100,25,scanstep):
                 print('.',end='')
+                book_shelf.DMark_mm((xintercept, ybias_mm), 2.0, 'red')
                 #get the line parameters in form of a dictionary
                 ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , ybias_mm, bpar.slice_width) 
                 # measure how booklike is this line (lower score is better)
@@ -132,8 +132,7 @@ for pic_filename in img_paths:
         color = score2color(scores[i])
         if color is not None:
             book_shelf.Dline_ld(ld,color)
-        
-        print('X: {} th: {} score: {}'.format(ld['xintercept'], ld['th'], scores[i]))      
+            print('X: {} th: {} score: {}'.format(ld['xintercept'], ld['th'], scores[i]))      
         
     cv2.imshow('identified book lines', book_shelf.image)
     cv2.waitKey(0)
