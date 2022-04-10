@@ -9,6 +9,21 @@ import book_classes as bc
 import book_parms as bpar
 
 
+def score2color(score):
+    c = None
+    brackets = [0.175,   0.3,    .65,       1.0]
+    
+    scorescale = 0.2
+    
+    brackets = [y*scorescale  for y in brackets]
+    colors  = ['red', 'green', 'yellow', 'white']
+    for i,t in enumerate(brackets):
+        if score < brackets[i]:
+            c = colors[i]
+            return c
+    return c
+    
+
     
 #img_paths = gb.glob('tiny/testimage2.png')
 img_paths = gb.glob('tiny/target.jpg')
@@ -36,8 +51,8 @@ for pic_filename in img_paths:
     sh = book_shelf.ishape()
     print('Original:   {:} rows, {:} cols.'.format(sh[0],sh[1]))
     
-    cv2.imshow('test',book_shelf.image)
-    cv2.waitKey(1500)
+    #cv2.imshow('test',book_shelf.image)
+    #cv2.waitKey(1500)
     #
     #
     #  scale the image 
@@ -98,14 +113,14 @@ for pic_filename in img_paths:
     scores = []
     lines  = []
     
-    for xintercept in range(-100,100,20):
-        for th in range(90, 190, 20):   # line angle
-            for ybias_mm in (-40,40,20):
+    for xintercept in range(-80,80,10):
+        for th in range(91, 190, 20):   # line angle
+            for ybias_mm in range(-40,40,10):
                 print('.',end='')
                 #get the line parameters in form of a dictionary
-                ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , bpar.slice_width) 
+                ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , ybias_mm, bpar.slice_width) 
                 # measure how booklike is this line (lower score is better)
-                lscore = nf.Get_line_score(label_img.image, bpar.slice_width, xintercept, th, bpar.book_edge_line_length_mm, ybias_mm, color_dist)  # x=0, th=125deg
+                lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist)  # x=0, th=125deg
                 #if lscore < 0.35:   # magic number!!
                 scores.append(lscore)
                 lines.append(ld)
@@ -114,10 +129,9 @@ for pic_filename in img_paths:
     # we're done sesarching
     # display high scoring lines 
     for i,ld in enumerate( lines):
-        color = 'white'
-        if scores[i] < 0.3:
-            color = 'green'
-        book_shelf.Dline_ld(ld,color)
+        color = score2color(scores[i])
+        if color is not None:
+            book_shelf.Dline_ld(ld,color)
         
         print('X: {} th: {} score: {}'.format(ld['xintercept'], ld['th'], scores[i]))      
         

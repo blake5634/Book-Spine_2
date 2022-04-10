@@ -18,7 +18,7 @@ blur_rad       =     int(7.0*mm2pix)    # to scaled pixels
 if blur_rad%2 == 0:   # make it odd # of pixels
     blur_rad += 1   
 
-KM_Clusters = 8     # number of K-means clusters for color
+KM_Clusters = 12     # number of K-means clusters for color
 
 #
 #   slant.py
@@ -30,7 +30,7 @@ max_gap_mm = 3  #mm   gap btwn lines defining new cluster (slant.py)
 book_edge_line_length_mm = 120 # mm  line length checked for edges
 slice_width  = 3 # mm   width examined for color dominance on either side of line
 row_bias_mm = -20  # mm   (shift line down from Y=0 line)         
-min_line_vals = 50   # min number of points above and below "0" 
+min_line_vals = 10   # min number of points above and below "0" 
 
 #  method 1 == Euclidean RGB distance
 #  method 2 == 350 if labels different, 0 otherwise

@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 import time as time
 import glob as gb
-from book_hough import *
 import newfcns as nf
 import book_classes as bc
 import book_parms as bpar
@@ -111,21 +110,22 @@ for pic_filename in img_paths:
     ###################################################################   Test Line 
     # make up a line       y = m0*x + b0
     
-    xintercept = -80 #mm        
+    xintercept = 20 #mm        
     ybias_mm = bpar.row_bias_mm
-    ybias_mm = 20
+    ybias_mm = -20
     
     
     for th in range(120, 200 , 10):
     #th = 140  # deg relative to 03:00 (clock)
         
         
-        ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , bpar.slice_width)  #llen=80, w=10
+        
+        ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
         
         
         
         # get the score
-        lscore = nf.Get_line_score(label_img.image, bpar.slice_width, xintercept, th, bpar.book_edge_line_length_mm, ybias_mm, color_dist)  # x=0, th=125deg
+        lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist)  # x=0, th=125deg
         
         print('X: {} th: {} score: {}'.format(xintercept, th, lscore))        
         
@@ -137,12 +137,12 @@ for pic_filename in img_paths:
         xmax2 = xintercept + dx  #mm
         colcode = 'yellow'
         
-        if lscore < 0.2:
+        if lscore < 0.2:          #BEST
             colcode = 'red'
         elif lscore < 0.35:
             colcode = 'green'
         elif lscore < 0.5:
-            colcode = 'white'
+            colcode = 'white'     # OK/bad
             
 
         # new line draw feature of bookImage class!

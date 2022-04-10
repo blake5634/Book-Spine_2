@@ -84,9 +84,12 @@ class bookImage():
         cv2.line(self.image, RC2PXY(p1_px), RC2PXY(p2_px), bpar.colors[st_color], width)
         
         
-    def Dline_ld(self,ld,color):
-        p1 = (ld['xmin'], ld['m0']*ld['xmin'] + ld['b0'])
-        p2 = (ld['xmax'], ld['m0']*ld['xmax'] + ld['b0'])
+    def Dline_ld(self,ld,color):  # draw line based on line dict params
+        p1 = (ld['xmin'], ld['m0']*ld['xmin'] + ld['b0'] + ld['ybias'])
+        p2 = (ld['xmax'], ld['m0']*ld['xmax'] + ld['b0'] + ld['ybias'])
+        print('P1: ', p1)
+        print('P2: ', p2)
+        print('ld: ', ld)
         self.Dline_mm(p1,p2,color)
         
         
@@ -214,24 +217,11 @@ if __name__=='__main__':
             tim1.Dline_mm(p1, p2,'white')
         
         tim1.Dline_px( (544,810), (544-250,810+125), 'white')
+        
         # pixel line from origin to +x and +y values
         tim1.Dline_mm( (0,0), (50,25), 'green')
             
-        
-        if False:# line
-            rS2 = 25/2.0
-            tim1.DRect_mm( (-rS2,-rS2), (rS2,rS2), 'blue')
-            
-            
-            #1089 rows, 1620 cols.
-            rS2px = 3
-            rowctr = int(1089/2)
-            assert rowctr == int(sh[0]/2)
-            colctr = int(1620/2)
-            assert colctr == int(sh[1]/2)
-            
-            tim1.DRect_px((rowctr-rS2px, colctr-rS2px),(rowctr+rS2px, colctr+rS2px),'white')
-        
+        # TODO:   test Dline_ld()
         
         title='test image'
         cv2.imshow(title, tim1.image)

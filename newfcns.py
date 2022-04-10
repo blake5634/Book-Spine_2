@@ -56,18 +56,18 @@ def XY2iXiY(img,X,Y,iscale=bpar.scale):
     col = int(  X*bpar.mm2pix + int(img.shape[1]/2) )
     iX = col
     iY = row
-    return iX, iY
-#
-# convert image ctr XY(mm) to Row, Col 
-#
-def XY2RC(img,X,Y,iscale=bpar.scale):
-    if iscale != bpar.scale:
-        f = float(bpar.scale)/float(iscale)
-        X *= f
-        Y *= f
-    row = int( -Y*bpar.mm2pix + int(img.shape[0]/2) )
-    col = int(  X*bpar.mm2pix + int(img.shape[1]/2) )
-    return row,col
+    #return iX, iY
+##
+## convert image ctr XY(mm) to Row, Col 
+##
+#def XY2RC(img,X,Y,iscale=bpar.scale):
+    #if iscale != bpar.scale:
+        #f = float(bpar.scale)/float(iscale)
+        #X *= f
+        #Y *= f
+    #row = int( -Y*bpar.mm2pix + int(img.shape[0]/2) )
+    #col = int(  X*bpar.mm2pix + int(img.shape[1]/2) )
+    #return row,col
 
 #
 #  Get image bounds in mm  
@@ -110,11 +110,12 @@ def Get_sizes(img, scale):
     simg_height_rows =  int(ish[0]/scale)
     return ish, (simg_height_rows, simg_width_cols)
 
-def Get_line_params(th, xintercept, llength,w=None):
+def Get_line_params(th, xintercept, llength, bias, w=None):
     '''
     th = angle in degrees
     xintercept = in mm
     llength = length of line (mm)
+    ybias = location of "y=0" line (vertical shift)
     w = width of analysis window (perp to line)
     
     returns dictionary of line info
@@ -124,10 +125,13 @@ def Get_line_params(th, xintercept, llength,w=None):
     d['xintercept'] = xintercept
     d['m0'] = np.tan(th*d2r) # slope (mm/mm)
     d['b0'] = -d['m0']*xintercept  # mm
+    d['ybias'] = bias
     
     
     # compute xmin and xmax
     x_line_len_mm = abs((llength)*np.cos(th*d2r)) # mm
+    if x_line_len_mm < 0.5:
+        x_line_len_mm = 2.0
 
     d['xmin'] = xintercept - x_line_len_mm/2.0
     d['xmax'] = xintercept + x_line_len_mm/2.0
@@ -142,8 +146,16 @@ def Get_line_params(th, xintercept, llength,w=None):
             tmp = 2
         d['rVp'] = tmp
          
-    d['ybias_mm'] = -d['b0']/d['m0']  # y intercept
+    #d['ybias_mm'] = -d['b0']/d['m0']  # y intercept
+    assert (d['xintercept'] > d['xmin'] and d['xintercept'] <= d['xmax']), 'bad x-value: '+str(d['xintercept'])
+
     return d
+
+
+
+
+
+
 #
 #
 #  Get edge score of a line through image
@@ -156,46 +168,46 @@ def Get_line_params(th, xintercept, llength,w=None):
 #   4) find dominant color label on either side of line- look for uniformity
 #
 #   NEW:   All coordinates and radii etc are in mm 
-
-#   TODO:  just pass a line dictionary from Get_line_params
-def Get_line_score(img, w, xintercept, th, llen,bias, cdist):
+def Get_line_score(img, w, ld, cdist):
     '''
-    img = image (already scaled)
+    img = bookImage() class
     w   = width of line analysis window (90deg from line) (mm)
-    xintercept = where line crosses vertical centerline of image (X=0) (mm)
-    th  = angle in deg relative to 03:00 on clock
-    llen = length of line segment (mm)
-    bias = vertical shift of the line center (mm)
+    ld = line parameter dict:
+        ld['xintercept'] = where line crosses vertical centerline of image (X=0) (mm)
+        ld['th'] = angle in deg relative to 03:00 on clock
+        ld['llen'] = length of line segment (mm)
+        ld['bias'] = vertical shift of the line center (mm)
     cdist = matrix of color distances (Euclid) btwn VQ centers
     '''
-    #print('\n\nLine Score:   x: {}(mm) , th: {}(deg)'.format( xintercept, th))
+    #print('\n\nLine Score:   x: {}(mm) , th: {}(deg)'.format( ld['xintercept'], th))
     #print(' ---   image shape: {}'.format(np.shape(img)))
     #print('Image sample: {}'.format(img[10,10]))
-    img_height_rows = img.shape[0] # height/rows
-    img_width_cols = img.shape[1] 
-    xmin, xmax, ymin, ymax = Get_mmBounds(img)  # in mm
-    assert (xintercept > xmin and xintercept <= xmax), 'bad x-value: '+str(xintercept)
+    img_height_rows = img.rows # height/rows
+    img_width_cols = img.cols 
     
-    ld = Get_line_params(th, xintercept, llen,w) 
     m0 = ld['m0'] # slope (mm/mm)
     b0 = ld['b0']  # mm
     rV = ld['rV']
     rVp = ld['rVp'] 
      
-    
-    xmin2 = ld['xmin'] #mm    X range for test line
-    xmax2 = ld['xmax'] #mm
+     
     #print('xmin/max2: {:4.2f}mm {:4.2f}mm'.format(xmin2,xmax2))
     # cols,  rows = XY2iXiY()
-    xmin_px, dummy =XY2iXiY(img, xmin2,0)  # pix  X range for test line
-    xmax_px, dummy =XY2iXiY(img, xmax2,0)  #  --> pixels in opencv coords.
     
-    xmin_px = max(0,xmin_px)
+    print('xmin/max mm: ', ld['xmin'], ld['xmax'])
+    # xmm --> col#
+    dummy, xmin_px = img.XYmm2RC(ld['xmin'],0)  # pix  X range for test line
+    dummy, xmax_px = img.XYmm2RC(ld['xmax'],0)  #  --> pixels in opencv coords.
+    
+    xmin_px = max(0,xmin_px)                  #  just in case
     xmax_px = min(img_width_cols,xmax_px)
+    
+    
+    
     # range of xvals for each line
     xrange_px = range(xmin_px, xmax_px-1, 1)  # pix cols
     
-    #print('x range: {} -- {}'.format(xmin_px, xmax_px)) 
+    print('x range: {} -- {}'.format(xmin_px, xmax_px)) 
     #study pixels above and below line at all columns in range   
     vals_abv = []  # values above the line (for all x values)
     vals_bel = []  #        below 
@@ -203,24 +215,26 @@ def Get_line_score(img, w, xintercept, th, llen,bias, cdist):
     nvals_app = 0 
     for col in xrange_px:  # for each x-value, go vertically above & below line.
         ncolsLine += 1
-        x = bpar.pix2mm*(col - img_width_cols/2) # convert back to mm(!)
-        ymm = m0*x+b0 + bias    # line eqn in mm
-        row, dummy = XY2RC(img,0,ymm)    # pix
+        x,y = img.RC2XYmm(0, col) # convert back to mm(!)
+        ymm = m0*x+b0 + ld['ybias']    # line eqn in mm
+        row, dummy = img.XYmm2RC(0,ymm)    # pix
         #print ('X/col:{} Ymm:{:4.2f} row:{}'.format(col,ymm,row))
-        if not ((row > img_height_rows-1 or row < 0) or (col > img_width_cols-1 or col < 0)): # line inside image?
+        print('checking row and col: ', row, col)
+        if not ((row > img_height_rows-1 or row < 0) or (col > img_width_cols-1 or col < 0)): # line not outside image?
             # above the line
+            print('looking at rows: ', row-rVp, row)
             for row1 in range(row,row-rVp,-1): # higher rows #s are "lower"
                 if  row1 > 0:
-                    #print('            Looking at (above): {}, {}'.format(row1,col))
+                    print('            Looking at (above): {}, {}'.format(row1,col))
                     #vals_abv.append(Get_pix_byRC(img,row1,col)) # accum. labels in zone above
-                    vals_abv.append(img[row1,col]) # accum. labels in zone above
+                    vals_abv.append(img.image[row1,col]) # accum. labels in zone above
                     nvals_app+=1
             # below the line
             for row1 in range(row, row+rVp,1):
                 if row1 < img_height_rows:  # 
                     #print('            Looking at (below): {}, {}'.format(row1,col))
                     #vals_bel.append(Get_pix_byRC(img,row1,col))
-                    vals_bel.append(img[row1,col])
+                    vals_bel.append(img.image[row1,col])
                     nvals_app+=1
                 
     
