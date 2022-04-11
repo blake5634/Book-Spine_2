@@ -222,10 +222,10 @@ def Get_line_score(img, w, ld, cdist):
         print('checking row and col: ', row, col)
         if not ((row > img_height_rows-1 or row < 0) or (col > img_width_cols-1 or col < 0)): # line not outside image?
             # above the line
-            print('looking at rows: ', row-rVp, row)
+            print('looking at rows: ', row-rVp, row+rVp, ' at col: ', col)
             for row1 in range(row,row-rVp,-1): # higher rows #s are "lower"
                 if  row1 > 0:
-                    print('            Looking at (above): {}, {}'.format(row1,col))
+                    #print('            Looking at (above): {}, {}'.format(row1,col))
                     #vals_abv.append(Get_pix_byRC(img,row1,col)) # accum. labels in zone above
                     vals_abv.append(img.image[row1,col]) # accum. labels in zone above
                     nvals_app+=1
@@ -251,18 +251,18 @@ def Get_line_score(img, w, ld, cdist):
         #print('labels above, below: (1st 100 samples)')
         #print(vals_abv[0:100], vals_bel[0:100])
         
-        #print('GLP: labels above: ', labs_abv)
-        #print('GLP: counts above: ', cnts_abv)
-        #print('GLP: labels below: ', labs_bel)
-        #print('GLP: counts below: ', cnts_bel)
+        print('GLS: labels above: ', labs_abv)
+        print('GLS: counts above: ', cnts_abv)
+        print('GLS: labels below: ', labs_bel)
+        print('GLS: counts below: ', cnts_bel)
         
         dom_lab_abv = labs_abv[np.argmax(cnts_abv)]   # which is most common label above?
         dom_lab_bel = labs_bel[np.argmax(cnts_bel)]
         dom_abv = np.max(cnts_abv)/np.sum(cnts_abv)  # how predominant? (0-1)
         dom_bel = np.max(cnts_bel)/np.sum(cnts_bel)  # how predominant? (0-1)
         
-        print('\n\nGLP: Dominant labels: above: {:5} below: {:5}'.format(dom_lab_abv,dom_lab_bel))
-        print('GLP: Dominance:       above: {:5.3f} below: {:5.3f}\n\n'.format(dom_abv,dom_bel))
+        print('\n\nGLS: Dominant labels: above: {:5} below: {:5}'.format(dom_lab_abv,dom_lab_bel))
+        print('GLS: Dominance:       above: {:5.3f} below: {:5.3f}\n\n'.format(dom_abv,dom_bel))
         # is the dominant color above line == dom color below?
         Method = bpar.Color_Dist_Method
         if Method == 1:
@@ -273,7 +273,7 @@ def Get_line_score(img, w, ld, cdist):
             else:
                 color_distance = 0.0
         else:
-            print('GLP: Illegal color Distance Method (1 or 2)')
+            print('GLS: Illegal color Distance Method (1 or 2)')
             quit()
         diff_score = color_distance/(dom_abv*dom_bel)  # weighted difference (smaller is better!)
     else:

@@ -125,7 +125,7 @@ for pic_filename in img_paths:
         # get the score
         lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist)  # x=0, th=125deg
         
-        print('X: {} th: {} score: {}'.format(xintercept, th, lscore))        
+        print('X: {} Y: {} th: {} score: {:5.3f}'.format(xintercept, ybias_mm, th, lscore))        
         
         #
         #   Draw the testing line and bounds 
