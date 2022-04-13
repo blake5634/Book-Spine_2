@@ -37,5 +37,19 @@ min_line_vals = 25  # min number of points above and below "0"
 Color_Dist_Method = 1
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-colors = {'white':(255,255,255), 'blue':(255,0,0), 'green':(0,255,0), 'red':(0,0,255),'yellow':(0,255,255)}
- 
+colors = {'black':(0,0,0), 'white':(255,255,255), 'blue':(255,0,0), 'green':(0,255,0), 'red':(0,0,255),'yellow':(0,255,255)}
+'''
+    Black: (0, 0, 0)
+    White: (255, 255, 255)
+    Red: (255, 0, 0)
+    Green: (0, 255, 0)
+    Blue: (0, 0, 255)
+    Aqua: (0, 255, 255)
+    Fuchsia: (255, 0, 255)
+    Maroon: (128, 0, 0)
+    Navy: (0, 0, 128)
+    Olive: (128, 128, 0)
+    Purple: (128, 0, 128)
+    Teal: (0, 128, 128)
+    Yellow: (255, 255, 0)
+'''

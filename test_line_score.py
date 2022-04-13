@@ -79,7 +79,11 @@ for pic_filename in img_paths:
     img0, tmp, ctrs, color_dist = nf.KM(img2.image,N)   
     label_img = bc.bookImage(tmp,img2.scale)
     #print('label_img.image shape: {}'.format(np.shape(label_img.image)))
-    #cv2.imshow("labeled KM image", img0)
+    
+    cv2.imshow('labels',img0)
+    cv2.waitKey(3000)
+    
+    
     
     imct = nf.Gen_cluster_colors(ctrs)
     if True:
@@ -113,9 +117,9 @@ for pic_filename in img_paths:
     xintercept = 83 #mm        
     ybias_mm = bpar.row_bias_mm
     ybias_mm = -12
-    
-    
     th = 145
+    
+    
     if True: 
     #for th in range(120, 200 , 10):
         
@@ -123,31 +127,27 @@ for pic_filename in img_paths:
         ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
         
         # get the score
-        lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist)  # x=0, th=125deg
+        lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, img2.image)  # x=0, th=125deg
         
         print('X: {} Y: {} th: {} score: {:5.3f}'.format(xintercept, ybias_mm, th, lscore))        
         
         #
         #   Draw the testing line and bounds 
         # 
-        dx = abs((bpar.book_edge_line_length_mm/2)*np.cos(th*d2r)) # mm
-        xmin2 = xintercept - dx  #mm    X range for test line
-        xmax2 = xintercept + dx  #mm
-        colcode = 'yellow'
-        
-        if lscore < 0.2:          #BEST
-            colcode = 'red'
-        elif lscore < 0.35:
-            colcode = 'green'
-        elif lscore < 0.5:
-            colcode = 'white'     # OK/bad
-            
+         
+        colcode = nf.score2color(lscore)
+        if colcode == None:
+            print('None is the color!')
+            colcode = 'white'
 
         # new line draw feature of bookImage class!
-        tsti.Dline_mm( (xmin2, ybias_mm + ld['m0']*xmin2+ld['b0']), (xmax2, ybias_mm + ld['m0']*xmax2+ld['b0']), colcode)
-        ## above window line
-        #nf.Dline_mm(tsti, (xmin2,  rV + m0*xmin2+b0), (xmax2,  rV + m0*xmax2+b0), 'blue')
-        #nf.Dline_mm(tsti, (xmin2, -rV + m0*xmin2+b0), (xmax2, -rV + m0*xmax2+b0), 'green')
+        tsti.Dline_ld(ld, colcode)
+        
+        # draw window above and below the line:
+        ld['ybias'] += ld['rV']
+        tsti.Dline_ld(ld, 'blue')    
+        ld['ybias'] -= 2*ld['rV']
+        tsti.Dline_ld(ld, 'green')
         
         
     sh = tsti.ishape()
@@ -168,5 +168,4 @@ for pic_filename in img_paths:
 
     title='test image'
     cv2.imshow(title, tsti.image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    cv2.waitKey(0) 

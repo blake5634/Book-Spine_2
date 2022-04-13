@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import glob as gb
 import book_parms as bpar
+import book_classes as bc
 import matplotlib.pyplot as plt
 import numpy as np
 from time import sleep
@@ -168,7 +169,7 @@ def Get_line_params(th, xintercept, llength, bias, w=None):
 #   4) find dominant color label on either side of line- look for uniformity
 #
 #   NEW:   All coordinates and radii etc are in mm 
-def Get_line_score(img, w, ld, cdist):
+def Get_line_score(img, w, ld, cdist, testimage):
     '''
     img = bookImage() class
     w   = width of line analysis window (90deg from line) (mm)
@@ -184,6 +185,7 @@ def Get_line_score(img, w, ld, cdist):
     #print('Image sample: {}'.format(img[10,10]))
     img_height_rows = img.rows # height/rows
     img_width_cols = img.cols 
+     
     
     m0 = ld['m0'] # slope (mm/mm)
     b0 = ld['b0']  # mm
@@ -194,32 +196,37 @@ def Get_line_score(img, w, ld, cdist):
     #print('xmin/max2: {:4.2f}mm {:4.2f}mm'.format(xmin2,xmax2))
     # cols,  rows = XY2iXiY()
     
-    print('xmin/max mm: ', ld['xmin'], ld['xmax'])
-    # xmm --> col#
-    dummy, xmin_px = img.XYmm2RC(ld['xmin'],0)  # pix  X range for test line
-    dummy, xmax_px = img.XYmm2RC(ld['xmax'],0)  #  --> pixels in opencv coords.
+    print('xmin/max mm: {:5.1f}, {:5.1f}'.format( ld['xmin'], ld['xmax'])) 
     
-    xmin_px = max(0,xmin_px)                  #  just in case
-    xmax_px = min(img_width_cols,xmax_px)
-    
-    
-    
-    # range of xvals for each line
-    xrange_px = range(xmin_px, xmax_px-1, 1)  # pix cols
-    
-    print('x range: {} -- {}'.format(xmin_px, xmax_px)) 
+    #timg2 = bc.bookImage(testimage, bpar.scale)
+    #timg2.Dline_ld(ld,'yellow')    
+    #cv2.imshow('Can you see it?', timg2.image)
+    #cv2.waitKey(50000)
+    #quit()
+        
     #study pixels above and below line at all columns in range   
     vals_abv = []  # values above the line (for all x values)
     vals_bel = []  #        below 
     ncolsLine = 0
     nvals_app = 0 
-    for col in xrange_px:  # for each x-value, go vertically above & below line.
-        ncolsLine += 1
-        x,y = img.RC2XYmm(0, col) # convert back to mm(!)
-        ymm = m0*x+b0 + ld['ybias']    # line eqn in mm
-        row, dummy = img.XYmm2RC(0,ymm)    # pix
-        #print ('X/col:{} Ymm:{:4.2f} row:{}'.format(col,ymm,row))
-        print('checking row and col: ', row, col)
+    
+    pixelInmm = img.scale
+    dummy, xmin_px = img.XYmm2RC(ld['xmin'],0)
+    dummy, xmax_px = img.XYmm2RC(ld['xmax'],0)
+    print('GLS: xmin/xmax (px)',xmin_px,xmax_px)
+    for col in range(xmin_px,xmax_px):
+
+        X0, dummy = img.RC2XYmm(0,col)
+        ymm = ld['m0']*X0 + ld['b0'] + ld['ybias']  # evaluate the line
+        row, col2 = img.XYmm2RC(X0,ymm)    # pix
+        if abs(col-col2) > 0: 
+            print('somethings wrong!!!')
+            quit()
+        #print ('GLS:     X: {:5.1f}mm Y: {:5.1f}mm'.format(X0, ymm))
+        #print ('GLS:     row: {:}   col {:}'.format(row, col))
+        
+        TST_MODE = True  
+        
         if not ((row > img_height_rows-1 or row < 0) or (col > img_width_cols-1 or col < 0)): # line not outside image?
             # above the line
             print('looking at rows: ', row-rVp, row+rVp, ' at col: ', col)
@@ -229,18 +236,28 @@ def Get_line_score(img, w, ld, cdist):
                     #vals_abv.append(Get_pix_byRC(img,row1,col)) # accum. labels in zone above
                     vals_abv.append(img.image[row1,col]) # accum. labels in zone above
                     nvals_app+=1
+                    #
+                    #
+                    if TST_MODE:
+                        testimage[row1,col] =  (0,0,0) # black out tested pixel
             # below the line
             for row1 in range(row, row+rVp,1):
                 if row1 < img_height_rows:  # 
                     #print('            Looking at (below): {}, {}'.format(row1,col))
                     #vals_bel.append(Get_pix_byRC(img,row1,col))
                     vals_bel.append(img.image[row1,col])
-                    nvals_app+=1
-                
+                    nvals_app+=1                
+                    #
+                    #
+                    if TST_MODE:
+                        testimage[row1,col] = (0,0,0)  # black out tested pixel
     
     #
     #  If we got enough pixels in our window for meaningful result:
     #
+    print('GLS: len: vals above',len(vals_abv))
+    print('GLS: len: vals below',len(vals_bel))
+    
     if len(vals_abv) > bpar.min_line_vals and len(vals_bel) > bpar.min_line_vals: 
         #print('shape vals: {}'.format(np.shape(vals_abv)))
         #print('sample: vals: ', vals_abv[0:10])
@@ -251,6 +268,7 @@ def Get_line_score(img, w, ld, cdist):
         #print('labels above, below: (1st 100 samples)')
         #print(vals_abv[0:100], vals_bel[0:100])
         
+        print('')
         print('GLS: labels above: ', labs_abv)
         print('GLS: counts above: ', cnts_abv)
         print('GLS: labels below: ', labs_bel)
@@ -278,12 +296,28 @@ def Get_line_score(img, w, ld, cdist):
         diff_score = color_distance/(dom_abv*dom_bel)  # weighted difference (smaller is better!)
     else:
         #x = input('\n\n\n[enter] to continue (0)')
-        return 99999999999  # a really really bad score
+        diff_score =  99999999999  # a really really bad score
     
     #x = input('\n\n\n[enter] to continue ({:5.2f})'.format(diff_score))
+    cv2.imshow('Test image', testimage)
+    cv2.waitKey(3000)
     return diff_score
                     
                 
+##   convert score to a color
+def score2color(score):
+    c = None
+    brackets = [0.1,   0.14,    .18,    .22]
+    
+    scorescale = 1
+    
+    brackets = [y*scorescale  for y in brackets]
+    colors  = ['red', 'green', 'yellow', 'white']
+    for i,t in enumerate(brackets):
+        if score < brackets[i]:
+            c = colors[i]
+            break
+    return c
             
 #
 #  Check along top for typical bacgkround pixels

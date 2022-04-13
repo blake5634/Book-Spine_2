@@ -9,19 +9,6 @@ import book_classes as bc
 import book_parms as bpar
 
 
-def score2color(score):
-    c = None
-    brackets = [0.1,   0.14,    .18,    .22]
-    
-    scorescale = 1
-    
-    brackets = [y*scorescale  for y in brackets]
-    colors  = ['red', 'green', 'yellow', 'white']
-    for i,t in enumerate(brackets):
-        if score < brackets[i]:
-            c = colors[i]
-            break
-    return c
     
 #img_paths = gb.glob('tiny/testimage2.png')
 img_paths = gb.glob('tiny/target.jpg')
@@ -73,7 +60,7 @@ for pic_filename in img_paths:
         b+=1
         
     tmp = cv2.GaussianBlur(img1.image, (b,b), 0)
-    img2 = bc.bookImage(tmp,bpar.scale)
+    img2 = bc.bookImage(tmp,img1.scale)
 
 
     ############
@@ -83,8 +70,8 @@ for pic_filename in img_paths:
     N = bpar.KM_Clusters
     img0, tmp, ctrs, color_dist = nf.KM(img2.image,N)   
     label_img = bc.bookImage(tmp,img2.scale)
-    #print('label_img.image shape: {}'.format(np.shape(label_img.image)))
-    #cv2.imshow("labeled KM image", img0)
+    print('label_img.image shape: {}'.format(np.shape(label_img.image)))
+    cv2.imshow("labeled KM image", img0)
     
     
     #
@@ -115,7 +102,6 @@ for pic_filename in img_paths:
     for xintercept in range(-80,80,scanstep):
         for th in range(120, 160, 5):   # line angle
             for ybias_mm in range(-100,25,scanstep):
-                print('.',end='')
                 book_shelf.DMark_mm((xintercept, ybias_mm), 2.0, 'red')
                 #get the line parameters in form of a dictionary
                 ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , ybias_mm, bpar.slice_width) 
@@ -129,11 +115,12 @@ for pic_filename in img_paths:
     # we're done sesarching
     # display high scoring lines 
     for i,ld in enumerate( lines):
-        color = score2color(scores[i])
+        color = nf.score2color(scores[i])
         if color is not None:
             book_shelf.Dline_ld(ld,color)
             print('X: {} th: {} score: {}'.format(ld['xintercept'], ld['th'], scores[i]))      
         
     cv2.imshow('identified book lines', book_shelf.image)
+    #cv2.imshow('tmp2', label_img.image)
     cv2.waitKey(0)
         

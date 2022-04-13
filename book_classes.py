@@ -9,7 +9,7 @@ from time import sleep
 #
 #  Useful classes 
 #
-
+import newfcns as nf
 
     
 def RC2PXY(rcTuple):  ##  OpenCV's confusing Point coords.
@@ -17,7 +17,7 @@ def RC2PXY(rcTuple):  ##  OpenCV's confusing Point coords.
 
 class bookImage():
     def __init__(self,img, mmPpx):
-        self.scale = mmPpx # mm per pixel
+        self.scale = mmPpx # mm per pixel (or 1 pixel in mm)
         self.image = img
         self.ishape()
         # validate image type here
@@ -63,8 +63,10 @@ class bookImage():
         sh = tmp.ishape()
         img_width  = int(sh[1] / factor)
         img_height = int(sh[0] / factor)
+        tmp.rows = img_height
+        tmp.cols = img_width
         tmp.image = cv2.resize(tmp.image, (img_width, img_height))
-        tmp.scale = self.scale * factor
+        tmp.scale = self.scale * factor  # mm_per_pixel
         return tmp
     
     def Get_mmBounds(self):
@@ -74,6 +76,15 @@ class bookImage():
         ymax = self.height_mm/2
         return (xmin, xmax, ymin, ymax)
             
+            
+            
+            
+    def Dline_ld(self,ld,color):  # draw line based on line dict params
+        p1 = (ld['xmin'], ld['m0']*ld['xmin'] + ld['b0'] + ld['ybias'])
+        p2 = (ld['xmax'], ld['m0']*ld['xmax'] + ld['b0'] + ld['ybias'])
+        
+        self.Dline_mm(p1,p2,color)
+        
     #  Draw a line/rect in mm coordinates
     #
     #   p1 = (p1X, p1Y) etc
@@ -81,28 +92,31 @@ class bookImage():
     def Dline_mm(self, p1xy, p2xy, st_color, width=3):
         p1_px = self.XYmm2RC( p1xy[0], p1xy[1])  # Xmm, Ymm
         p2_px = self.XYmm2RC( p2xy[0], p2xy[1])
+        print('Dline_mm:  Drawing line from {:} to {:} (row,col)'.format(p1_px,p2_px))
         cv2.line(self.image, RC2PXY(p1_px), RC2PXY(p2_px), bpar.colors[st_color], width)
         
         
-    def Dline_ld(self,ld,color):  # draw line based on line dict params
-        p1 = (ld['xmin'], ld['m0']*ld['xmin'] + ld['b0'] + ld['ybias'])
-        p2 = (ld['xmax'], ld['m0']*ld['xmax'] + ld['b0'] + ld['ybias'])
         
-        self.Dline_mm(p1,p2,color)
-        
-        
-    def DRect_mm(self,  p1, p2, st_color, width=3):
+    def Drect_mm(self,  p1, p2, st_color, width=3):
         p1_px = self.XYmm2RC(p1[0], p1[1])
         p2_px = self.XYmm2RC(p2[0], p2[1])
         cv2.rectangle(self.image, RC2PXY(p1_px), RC2PXY(p2_px), bpar.colors[st_color], width)
         
     # draw a square to mark a spot centered on p1
-    def DMark_mm(self, p1, side, color):
+    def Dmark_mm(self, p1mm, side, color):
         #side = square side length in mm 
         # get corners of square
-        ps1 = ( p1[0] - side/2, p1[1] - side/2 ) 
-        ps2 = ( p1[0] + side/2, p1[1] + side/2  )
-        self.DRect_mm(ps1,ps2,color)
+        ps1 = ( p1mm[0] - side/2, p1mm[1] - side/2 ) 
+        ps2 = ( p1mm[0] + side/2, p1mm[1] + side/2  )
+        self.Drect_mm(ps1,ps2,color)
+        
+    # draw a square to mark a spot centered on p1
+    def Dmark_px(self, p1RC, side, color):
+        #side = square side length in pixels 
+        # get corners of square
+        ps1 = ( int(p1RC[0] - side/2), int(p1RC[1] - side/2) ) 
+        ps2 = ( int(p1RC[0] + side/2), int(p1RC[1] + side/2) )
+        self.Drect_px(ps1,ps2,color)
         
     def Dline_px(self, p1, p2, st_color, width=3):
         p1r = (p1[1],p1[0])
@@ -110,7 +124,7 @@ class bookImage():
         cv2.line(self.image, p1r, p2r, bpar.colors[st_color], width)
 
         
-    def DRect_px(self, p1, p2, st_color, width=3):
+    def Drect_px(self, p1, p2, st_color, width=3):
         p1r = RC2PXY(p1)
         p2r = RC2PXY(p2)
         cv2.rectangle(self.image, p1r, p2r, bpar.colors[st_color], width)
@@ -170,7 +184,8 @@ if __name__=='__main__':
         
         #Instantiate
         pixels_per_mm = 5.0
-        tim1 = bookImage(img_orig, 1/pixels_per_mm)   # mm/pixel
+        mm_per_pixel = 1.0/pixels_per_mm
+        tim1 = bookImage(img_orig, mm_per_pixel)   # mm/pixel
         
         sh2 = tim1.ishape()
         assert sh == sh2, 'shape method FAILS'
@@ -204,14 +219,14 @@ if __name__=='__main__':
         
         # Place marks in right places:
         
-        tim1.DMark_mm((  0.0, 0.0), 2, 'red')
-        tim1.DMark_mm(( 10.0, 0.0), 2, 'red')
-        tim1.DMark_mm(( 20.0,10.0), 2, 'red')
-        tim1.DMark_mm(( -10.0,-50.0), 2, 'red')
+        tim1.Dmark_mm((  0.0, 0.0), 2, 'red')
+        tim1.Dmark_mm(( 10.0, 0.0), 2, 'red')
+        tim1.Dmark_mm(( 20.0,10.0), 2, 'red')
+        tim1.Dmark_mm(( -10.0,-50.0), 2, 'red')
         
         # test rectangle drawing
         #  (should be predominantly horizontal)
-        tim1.DRect_mm( (-80,-20), (-10,-10), 'green')
+        tim1.Drect_mm( (-80,-20), (-10,-10), 'green')
         
         # pixel line from one corner (almost) to the other
         tim1.Dline_px( (10,10), (1079,1610),'red')
@@ -238,11 +253,37 @@ if __name__=='__main__':
         # pixel line from origin to +x and +y values
         tim1.Dline_mm( (0,0), (50,25), 'green')
             
-        # TODO:   test Dline_ld()
-        
+         
         title='test image'
         cv2.imshow(title, tim1.image)
         cv2.waitKey(5000)
-            
+        
+        
+        #
+        #  Now try similar tests with scaled image
+        #
+        tim2 = bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), mm_per_pixel).downvert(4.0)
+        
+
+        #tim2.Dxy_axes()
+        tim2.Dline_px((100,100),(200,400),'green') 
+        tim2.Dmark_px((200,200),14,'yellow')
+        tim2.Dmark_px((200,300),14,'blue')
+        
+        
+        # Plot a line in mm on scaled image
+        th = 145
+        xintercept = 20
+        llength = bpar.book_edge_line_length_mm
+        bias = -20
+        ld2 = nf.Get_line_params(th, xintercept, llength, bias)
+        print('Test level:')
+        tim2.Dline_ld(ld2,'white')
+        print('EO Test')
+        
+        cv2.imshow('Scaled Down Test',tim2.image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        
         
         
