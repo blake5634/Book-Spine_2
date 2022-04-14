@@ -19,13 +19,8 @@ class bookImage():
     def __init__(self,img, mmPpx):
         self.scale = mmPpx # mm per pixel (or 1 pixel in mm)
         self.image = img
-        self.ishape()
-        # validate image type here
         
-    def copy(self):
-        return cp.copy(self)
-    
-    def ishape(self):        
+        #  set up the size/shape parameters
         sh = self.image.shape
         self.rows = sh[0]
         self.cols = sh[1]
@@ -34,7 +29,16 @@ class bookImage():
         self.ctXmm = self.width_mm/2.0    # mm offset to center of image H
         self.ctYmm = self.height_mm/2.0  # mm offset to center of image V
         
+        # validate image type here
+        
+    def icopy(self):
+        return cp.deepcopy(self,{})
+    
+    def ishape(self):        
+        sh = self.image.shape
+        
         print('   Image scale info:')
+        print('   Scale Factor: ', self.scale, ' mm/pixel')
         print('   rows/cols: ',      sh)
         print('   height/width(mm)', self.height_mm, self.width_mm )
     
@@ -59,16 +63,24 @@ class bookImage():
         
     # create a new bookImage scaled down by factor
     def downvert(self, factor):
-        tmp = self.copy()
-        sh = tmp.ishape()
+        print('downvert: scaling down by factor: ',factor)
+        tmp = self.icopy() 
+        tmp.scale = self.scale * factor  # mm_per_pixel
+        sh = self.image.shape
         img_width  = int(sh[1] / factor)
         img_height = int(sh[0] / factor)
         tmp.rows = img_height
         tmp.cols = img_width
-        tmp.image = cv2.resize(tmp.image, (img_width, img_height))
-        tmp.scale = self.scale * factor  # mm_per_pixel
-        return tmp
-    
+        tmp.image = cv2.resize(tmp.image, (img_width,img_height))
+        # set up the size/shape parameters
+        tmp.width_mm =  tmp.cols*tmp.scale
+        tmp.height_mm = tmp.rows*tmp.scale
+        tmp.ctXmm = tmp.width_mm/2.0    # mm offset to center of image H
+        tmp.ctYmm = tmp.height_mm/2.0  # mm offset to center of image V
+         
+        return tmp 
+        
+        
     def Get_mmBounds(self):
         xmin = -self.width_mm/2
         ymin = -self.height_mm/2
@@ -76,13 +88,9 @@ class bookImage():
         ymax = self.height_mm/2
         return (xmin, xmax, ymin, ymax)
             
-            
-            
-            
     def Dline_ld(self,ld,color):  # draw line based on line dict params
         p1 = (ld['xmin'], ld['m0']*ld['xmin'] + ld['b0'] + ld['ybias'])
         p2 = (ld['xmax'], ld['m0']*ld['xmax'] + ld['b0'] + ld['ybias'])
-        
         self.Dline_mm(p1,p2,color)
         
     #  Draw a line/rect in mm coordinates
@@ -92,7 +100,7 @@ class bookImage():
     def Dline_mm(self, p1xy, p2xy, st_color, width=3):
         p1_px = self.XYmm2RC( p1xy[0], p1xy[1])  # Xmm, Ymm
         p2_px = self.XYmm2RC( p2xy[0], p2xy[1])
-        print('Dline_mm:  Drawing line from {:} to {:} (row,col)'.format(p1_px,p2_px))
+        #print('Dline_mm:  Drawing line from {:} to {:} (row,col)'.format(p1_px,p2_px))
         cv2.line(self.image, RC2PXY(p1_px), RC2PXY(p2_px), bpar.colors[st_color], width)
         
         
@@ -200,6 +208,12 @@ if __name__=='__main__':
         assert tim1.XYmm2RC( 0.0,  0.0) == (544,810), fs
         assert tim1.XYmm2RC( 50.0,25.0) == (419,1060), fs
         
+        rtst = 100
+        ctst = 250
+        
+        pxymm = tim1.RC2XYmm(rtst,ctst)
+        assert tim1.XYmm2RC(pxymm[0],pxymm[1]) == (rtst,ctst), 'RC->XY->RC FAILS'
+        
         ##  TEST row,col to mm
         
         print('Converted value of ', int(tim1.rows/2), int(tim1.cols/2),' is ', tim1.RC2XYmm(tim1.rows/2,tim1.cols/2))
@@ -258,12 +272,18 @@ if __name__=='__main__':
         cv2.imshow(title, tim1.image)
         cv2.waitKey(5000)
         
-        
+        #######################################################################33   Scale Down
         #
         #  Now try similar tests with scaled image
         #
-        tim2 = bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), mm_per_pixel).downvert(4.0)
-        
+        #tim2 = bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), mm_per_pixel).downvert(4.0)
+        print('\n\n----------------------------------')
+        print('original image;')
+        tim1.ishape()
+        tim2 = tim1.icopy()
+        print('generating scaled test image: ')
+        tim2 = tim1.downvert(4.0)        
+        tim2.ishape()
 
         #tim2.Dxy_axes()
         tim2.Dline_px((100,100),(200,400),'green') 
@@ -273,13 +293,16 @@ if __name__=='__main__':
         
         # Plot a line in mm on scaled image
         th = 145
-        xintercept = 20
+        xintercept = 80
         llength = bpar.book_edge_line_length_mm
         bias = -20
         ld2 = nf.Get_line_params(th, xintercept, llength, bias)
         print('Test level:')
         tim2.Dline_ld(ld2,'white')
         print('EO Test')
+        
+        ###  draw mm coordinate system
+        tim2.Dxy_axes()
         
         cv2.imshow('Scaled Down Test',tim2.image)
         cv2.waitKey(0)
