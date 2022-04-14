@@ -169,6 +169,8 @@ def Get_line_params(th, xintercept, llength, bias, w=None):
 #   4) find dominant color label on either side of line- look for uniformity
 #
 #   NEW:   All coordinates and radii etc are in mm 
+#
+#    testimage --- an image (not bookimage) to mark up for testing:  must be same size as img.
 def Get_line_score(img, w, ld, cdist, testimage):
     '''
     img = bookImage() class
@@ -184,17 +186,7 @@ def Get_line_score(img, w, ld, cdist, testimage):
     #print(' ---   image shape: {}'.format(np.shape(img)))
     #print('Image sample: {}'.format(img[10,10]))
     img_height_rows = img.rows # height/rows
-    img_width_cols = img.cols 
-     
-    
-    m0 = ld['m0'] # slope (mm/mm)
-    b0 = ld['b0']  # mm
-    rV = ld['rV']
-    rVp = ld['rVp'] 
-     
-     
-    #print('xmin/max2: {:4.2f}mm {:4.2f}mm'.format(xmin2,xmax2))
-    # cols,  rows = XY2iXiY()
+    img_width_cols = img.cols   
     
     print('xmin/max mm: {:5.1f}, {:5.1f}'.format( ld['xmin'], ld['xmax'])) 
     
@@ -210,47 +202,61 @@ def Get_line_score(img, w, ld, cdist, testimage):
     ncolsLine = 0
     nvals_app = 0 
     
-    pixelInmm = img.scale
+    #pixelInmm = img.scale
     dummy, xmin_px = img.XYmm2RC(ld['xmin'],0)
     dummy, xmax_px = img.XYmm2RC(ld['xmax'],0)
-    print('GLS: xmin/xmax (px)',xmin_px,xmax_px)
+    
+    print('GLS: colMin/ColMax (px)',xmin_px,xmax_px)
+    
+    assert img.ishape()[0] == testimage.shape[0], 'Image shapes differ (rows)- blackout test INVALID'
+    assert img.ishape()[1] == testimage.shape[1], 'Image shapes differ (cols)- blackout test INVALID'
+        
     for col in range(xmin_px,xmax_px):
 
         X0, dummy = img.RC2XYmm(0,col)
+        # Here we evaluate the line forming the center of our "book spine"
         ymm = ld['m0']*X0 + ld['b0'] + ld['ybias']  # evaluate the line
-        row, col2 = img.XYmm2RC(X0,ymm)    # pix
-        if abs(col-col2) > 0: 
+        row, col2 = img.XYmm2RC(X0,ymm)    # convert ymm to row 
+        
+        if abs(col-col2) > 0: # just a consistency check
             print('somethings wrong!!!')
             quit()
-        #print ('GLS:     X: {:5.1f}mm Y: {:5.1f}mm'.format(X0, ymm))
-        #print ('GLS:     row: {:}   col {:}'.format(row, col))
+        print ('GLS:     X: {:5.1f}mm Y: {:5.1f}mm'.format(X0, ymm))
+        print ('GLS:     row: {:}   col {:}'.format(row, col))
+        #x = input('ENTER')
         
-        TST_MODE = True  
+        TST_MODE = 'label'  
         
         if not ((row > img_height_rows-1 or row < 0) or (col > img_width_cols-1 or col < 0)): # line not outside image?
+            ############################
             # above the line
-            print('looking at rows: ', row-rVp, row+rVp, ' at col: ', col)
-            for row1 in range(row,row-rVp,-1): # higher rows #s are "lower"
-                if  row1 > 0:
+            #print('looking at rows: ', row-ld['rVp'], row+ld['rVp'], ' at col: ', col)
+            for row1 in range(row,row-ld['rVp'],-1): # higher rows #s are "lower"
+                if  row1 > 0 and row1 < img_height_rows:
                     #print('            Looking at (above): {}, {}'.format(row1,col))
                     #vals_abv.append(Get_pix_byRC(img,row1,col)) # accum. labels in zone above
                     vals_abv.append(img.image[row1,col]) # accum. labels in zone above
                     nvals_app+=1
                     #
                     #
-                    if TST_MODE:
+                    if TST_MODE=='color':
                         testimage[row1,col] =  (0,0,0) # black out tested pixel
+                    if TST_MODE=='label':
+                        testimage[row1,col] =  0 # black out tested pixel
+            ############################
             # below the line
-            for row1 in range(row, row+rVp,1):
-                if row1 < img_height_rows:  # 
+            for row1 in range(row, row+ld['rVp'],1):
+                if row1 < img_height_rows and row1 > 0:  # 
                     #print('            Looking at (below): {}, {}'.format(row1,col))
                     #vals_bel.append(Get_pix_byRC(img,row1,col))
                     vals_bel.append(img.image[row1,col])
                     nvals_app+=1                
                     #
                     #
-                    if TST_MODE:
-                        testimage[row1,col] = (0,0,0)  # black out tested pixel
+                    if TST_MODE=='color':
+                        testimage[row1,col] =  (0,0,0) # black out tested pixel
+                    if TST_MODE=='label':
+                        testimage[row1,col] =  0 # black out tested pixel
     
     #
     #  If we got enough pixels in our window for meaningful result:
@@ -299,7 +305,7 @@ def Get_line_score(img, w, ld, cdist, testimage):
         diff_score =  99999999999  # a really really bad score
     
     #x = input('\n\n\n[enter] to continue ({:5.2f})'.format(diff_score))
-    cv2.imshow('Test image', testimage)
+    cv2.imshow('testimage (blackout data points used)', testimage)
     cv2.waitKey(3000)
     return diff_score
                     

@@ -198,21 +198,28 @@ if __name__=='__main__':
         sh2 = tim1.ishape()
         assert sh == sh2, 'shape method FAILS'
         
+        print('                         ishape() tests PASS')
         
         ## #  converting tests
         
-        ##   TEST mm to row,col
+        ##   TEST mm to row,col  on 4 corners of a squares
         #print('Converted value of XY=( 0.0, 0.0)mm is', tim1.XYmm2RC( 0.0,  0.0))
         #print('Converted value of XY=(50.0,25.0)mm is', tim1.XYmm2RC( 50.0,25.0))
         fs = 'mm to pixel conversion ERROR'
         assert tim1.XYmm2RC( 0.0,  0.0) == (544,810), fs
         assert tim1.XYmm2RC( 50.0,25.0) == (419,1060), fs
+        assert tim1.XYmm2RC( 50.0, 0.0) == (544,1060), fs
+        assert tim1.XYmm2RC(  0.0,25.0) == (419,810), fs
+        
+        print('                          XYmm2RC tests PASS')
         
         rtst = 100
         ctst = 250
         
         pxymm = tim1.RC2XYmm(rtst,ctst)
         assert tim1.XYmm2RC(pxymm[0],pxymm[1]) == (rtst,ctst), 'RC->XY->RC FAILS'
+        
+        print('                         XYmm2RC(RC2XYmm(R,C) test   PASS')
         
         ##  TEST row,col to mm
         
@@ -221,12 +228,14 @@ if __name__=='__main__':
         x = tim1.RC2XYmm(tim1.rows/2,tim1.cols/2)
         assert approx(x[0],0.0), fs
         assert approx(x[1],0.0), fs
+    
         
         x = tim1.RC2XYmm(tim1.rows/2+10,tim1.cols/2+20)
         #print(' 10, 20 px more: ', x)
         assert approx(x[0],  4), fs
         assert approx(x[1], -2), fs
         
+        print('                           center conversion tests     PASS')
         #
         #   test drawing
         #

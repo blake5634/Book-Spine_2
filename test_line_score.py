@@ -37,7 +37,7 @@ for pic_filename in img_paths:
     #
     #img = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
     img_orig = bc.bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), 0.2) 
-    tsti = img_orig.copy()  # copy of original for visualization 
+    tsti = img_orig.icopy()  # copy of original for visualization 
 
     sh = img_orig.ishape()
     print('Original:   {:} rows, {:} cols.'.format(sh[0],sh[1]))
@@ -49,7 +49,7 @@ for pic_filename in img_paths:
     #     scale factor imported from newfcns.py
     #
     
-    img1 = img_orig.downvert(bpar.scale)
+    img1 = img_orig.downvert(2)     # scale down rows and cols by 2
         
     #img_width = scaled_ish[1]
     #img_height = scaled_ish[0] 
@@ -77,13 +77,12 @@ for pic_filename in img_paths:
     #
     N = bpar.KM_Clusters
     img0, tmp, ctrs, color_dist = nf.KM(img2.image,N)   
-    label_img = bc.bookImage(tmp,img2.scale)
+    labelColorImg,  LabelImage, ctrs, color_dist = nf.KM(img2.image,N)   
+    label_img = bc.bookImage(LabelImage,img2.scale)
     #print('label_img.image shape: {}'.format(np.shape(label_img.image)))
     
-    cv2.imshow('labels',img0)
-    cv2.waitKey(3000)
-    
-    
+    #cv2.imshow('labels',img0)
+    #cv2.waitKey(3000)
     
     imct = nf.Gen_cluster_colors(ctrs)
     if True:
@@ -92,62 +91,45 @@ for pic_filename in img_paths:
     nfound = 0
     
     
-    sh = label_img.ishape()   # new class uses shape()
-    print('Labeled:  {:} rows, {:} cols.'.format(sh[0],sh[1])) 
+    sh2 = label_img.ishape()   # new class uses shape()
+    print('Labeled:  {:} rows, {:} cols.'.format(sh2[0],sh2[1])) 
     
     #
     #   Find background label
     #
     backgnd = nf.Check_background(label_img.image)    
     
-    #
-    #  look for lines at a bunch of x-values
-    #
-    xwidth = 81
-    linescanx_mm = range(xwidth,-xwidth, -2) #mm
-    dth = 15 # degrees off of 135
-    ang_scan_deg = range(135-dth, 135+dth,2)  # deg 
-    
-    lines_found = []
-    number_of_all_lines = 2*xwidth*dth
-    
     ###################################################################   Test Line 
     # make up a line       y = m0*x + b0
     
     xintercept = 83 #mm        
-    ybias_mm = bpar.row_bias_mm
     ybias_mm = -12
     th = 145
+    # get line params
+    ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
     
+    # get the score
+    lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, labelColorImg ) # x=0, th=125deg
     
-    if True: 
-    #for th in range(120, 200 , 10):
+    print('X: {} Y: {} th: {} score: {:5.3f}'.format(xintercept, ybias_mm, th, lscore))        
+    
+    #
+    #   Draw the testing line and bounds 
+    # 
         
-        # get line params
-        ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
-        
-        # get the score
-        lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, img2.image)  # x=0, th=125deg
-        
-        print('X: {} Y: {} th: {} score: {:5.3f}'.format(xintercept, ybias_mm, th, lscore))        
-        
-        #
-        #   Draw the testing line and bounds 
-        # 
-         
-        colcode = nf.score2color(lscore)
-        if colcode == None:
-            print('None is the color!')
-            colcode = 'white'
+    colcode = nf.score2color(lscore)
+    if colcode == None:
+        print('None is the color!')
+        colcode = 'white'
 
-        # new line draw feature of bookImage class!
-        tsti.Dline_ld(ld, colcode)
-        
-        # draw window above and below the line:
-        ld['ybias'] += ld['rV']
-        tsti.Dline_ld(ld, 'blue')    
-        ld['ybias'] -= 2*ld['rV']
-        tsti.Dline_ld(ld, 'green')
+    # new line draw feature of bookImage class!
+    tsti.Dline_ld(ld, colcode)
+    
+    # draw window above and below the line:
+    ld['ybias'] += ld['rV']
+    tsti.Dline_ld(ld, 'blue')    
+    ld['ybias'] -= 2*ld['rV']
+    tsti.Dline_ld(ld, 'green')
         
         
     sh = tsti.ishape()
@@ -160,7 +142,7 @@ for pic_filename in img_paths:
     tsti.Dxy_axes()
         
         
-    #draw the "ybias_mm" line
+    #draw the "ybias_mm" line2
     (xmin, xmax, ymin, ymax) = tsti.Get_mmBounds()
     ## Draw the effective midpoint in Y (row_bias_mm)
     tsti.Dline_mm((xmin+20,ybias_mm), (xmax-20,ybias_mm), 'red')

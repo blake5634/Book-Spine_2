@@ -18,7 +18,7 @@ blur_rad       =     int(7.0*mm2pix)    # to scaled pixels
 if blur_rad%2 == 0:   # make it odd # of pixels
     blur_rad += 1   
 
-KM_Clusters = 8     # number of K-means clusters for color
+KM_Clusters = 12     # number of K-means clusters for color
 
 #
 #   slant.py
