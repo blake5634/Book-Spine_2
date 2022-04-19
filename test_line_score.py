@@ -37,7 +37,7 @@ for pic_filename in img_paths:
     #
     #img = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
     img_orig = bc.bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), 0.2) 
-    tsti = img_orig.icopy()  # copy of original for visualization 
+    #tsti = img_orig.icopy()  # copy of original for visualization 
 
     sh = img_orig.ishape()
     print('Original:   {:} rows, {:} cols.'.format(sh[0],sh[1]))
@@ -49,13 +49,9 @@ for pic_filename in img_paths:
     #     scale factor imported from newfcns.py
     #
     
-    img1 = img_orig.downvert(2)     # scale down rows and cols by 2
-        
-    #img_width = scaled_ish[1]
-    #img_height = scaled_ish[0] 
-    #img1 = cv2.resize(img_orig, (img_width, img_height))
-    
-    sh = img1.ishape()
+    img_orig_sm = img_orig.downvert(2)     # scale down rows and cols by 2
+         
+    sh = img_orig_sm.ishape()
     print('Scaled:    {:} rows, {:} cols.'.format(sh[0],sh[1]))        
         
     ############
@@ -63,14 +59,13 @@ for pic_filename in img_paths:
     #   blur  
     #
     
-    b = int(bpar.blur_rad/bpar.scale)
-    if b%2 == 0:
-        b+=1
-        
-    tmp = cv2.GaussianBlur(img1.image, (b,b), 0)
-    img2 = bc.bookImage(tmp,bpar.scale)
-
-
+    blur = False
+    
+    if blur:
+        img_orig_sm.blur_rad_mm(bpar.blur_rad_mm) 
+    else:
+        img2 = img_orig_sm.icopy()  # no blur 
+    
     ############
     #
     #  Use KMeans to posterize to N color labels
@@ -79,7 +74,15 @@ for pic_filename in img_paths:
     img0, tmp, ctrs, color_dist = nf.KM(img2.image,N)   
     labelColorImg,  LabelImage, ctrs, color_dist = nf.KM(img2.image,N)   
     label_img = bc.bookImage(LabelImage,img2.scale)
-    #print('label_img.image shape: {}'.format(np.shape(label_img.image)))
+    lcolor_img = bc.bookImage(labelColorImg, img2.scale)
+    #colors_i2  = img2.icopy()
+
+    print('label_img.image shape: {}'.format(np.shape(label_img.image)))
+    print('label_img.ishape():    {}'.format(label_img.ishape()))
+    print('label_img.scale:       {}'.format(label_img.scale))
+    print('labelColorImg shape:   {}'.format(np.shape(labelColorImg)))
+    
+    x = input('ENTER')
     
     #cv2.imshow('labels',img0)
     #cv2.waitKey(3000)
@@ -91,7 +94,7 @@ for pic_filename in img_paths:
     nfound = 0
     
     
-    sh2 = label_img.ishape()   # new class uses shape()
+    sh2 = label_img.ishape()   # new class uses ishape()
     print('Labeled:  {:} rows, {:} cols.'.format(sh2[0],sh2[1])) 
     
     #
@@ -109,7 +112,9 @@ for pic_filename in img_paths:
     ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
     
     # get the score
-    lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, labelColorImg ) # x=0, th=125deg
+    lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
+    
+    tsti = lcolor_img.icopy()
     
     print('X: {} Y: {} th: {} score: {:5.3f}'.format(xintercept, ybias_mm, th, lscore))        
     

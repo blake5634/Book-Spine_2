@@ -24,6 +24,10 @@ class bookImage():
         sh = self.image.shape
         self.rows = sh[0]
         self.cols = sh[1]
+        if len(sh) > 2:
+            self.type = 'color'
+        else:
+            self.type = 'mono'
         self.width_mm =  self.cols*self.scale
         self.height_mm = self.rows*self.scale
         self.ctXmm = self.width_mm/2.0    # mm offset to center of image H
@@ -46,6 +50,22 @@ class bookImage():
         
     def get_px_RC(self,row,col):
         return(self.image[row][col])
+    
+    def set_px_RC(self, row,col,value):
+        if self.type == 'mono':
+            l1 =1
+        elif self.type == 'color':
+            l1 = 3
+        else:
+            print('set_px_RC:  image type')
+            quit()
+        if type(value) == type(5):
+            l2 = 1
+        if type(value) == type((0,0,0)):
+            l2 = 3
+        assert l1 == l2, 'attempting to set wrong pixel size (RGB vs mono)'
+        self.image[row][col] = value
+        return
     
     def get_px_XYmm(self,Xmm,Ymm):
         row,col = self.XYmm2RC(Xmm,Ymm)
@@ -79,8 +99,15 @@ class bookImage():
         tmp.ctYmm = tmp.height_mm/2.0  # mm offset to center of image V
          
         return tmp 
-        
-        
+
+    def blur_mm_rad(radius):
+        b = int(radius/self.scale)
+        if b%2 == 0:  # radius must be odd # 
+            b+=1            
+        tmp = cv2.GaussianBlur(self.image, (b,b), 0)
+        self.image = tmp
+        return 
+    
     def Get_mmBounds(self):
         xmin = -self.width_mm/2
         ymin = -self.height_mm/2
@@ -162,7 +189,8 @@ def approx(a,b):
     else:
         return False
         
-        
+def printpass(str):
+    print('\n                 {:40}         PASS\n'.format(str))
         
         
 if __name__=='__main__':
@@ -198,7 +226,7 @@ if __name__=='__main__':
         sh2 = tim1.ishape()
         assert sh == sh2, 'shape method FAILS'
         
-        print('                         ishape() tests PASS')
+        printpass('ishape() tests')
         
         ## #  converting tests
         
@@ -211,7 +239,7 @@ if __name__=='__main__':
         assert tim1.XYmm2RC( 50.0, 0.0) == (544,1060), fs
         assert tim1.XYmm2RC(  0.0,25.0) == (419,810), fs
         
-        print('                          XYmm2RC tests PASS')
+        printpass('XYmm2RC tests')
         
         rtst = 100
         ctst = 250
@@ -219,7 +247,7 @@ if __name__=='__main__':
         pxymm = tim1.RC2XYmm(rtst,ctst)
         assert tim1.XYmm2RC(pxymm[0],pxymm[1]) == (rtst,ctst), 'RC->XY->RC FAILS'
         
-        print('                         XYmm2RC(RC2XYmm(R,C) test   PASS')
+        printpass('XYmm2RC(RC2XYmm(R,C) test')
         
         ##  TEST row,col to mm
         
@@ -235,7 +263,28 @@ if __name__=='__main__':
         assert approx(x[0],  4), fs
         assert approx(x[1], -2), fs
         
-        print('                           center conversion tests     PASS')
+        printpass('center conversion tests')
+        
+        ##
+        #
+        #   Test icopy() vs make new image
+        #
+        
+        tst_icop = tim1.icopy()
+        tst_newbI = bookImage(tim1.image, tim1.scale)
+        
+        #assert tst_icop.image == tst_newbI.image,  'image mismatch'
+        assert tst_icop.scale     == tst_newbI.scale,     'scale mismatch'
+        assert tst_icop.height_mm == tst_newbI.height_mm, 'height_mm mismatch'
+        assert tst_icop.width_mm  == tst_newbI.width_mm,  'width_mm mismatch'
+        assert tst_icop.rows      == tst_newbI.rows,      'rows mismatch'
+        assert tst_icop.cols      == tst_newbI.cols,      'cols mismatch'
+        assert tst_icop.ctXmm     == tst_newbI.ctXmm,     'ctXmm mismatch'
+        assert tst_icop.ctYmm     == tst_newbI.ctYmm,     'ctYmm mismatch'
+
+        printpass('copy vs. newinstance')
+        
+        
         #
         #   test drawing
         #
@@ -306,9 +355,7 @@ if __name__=='__main__':
         llength = bpar.book_edge_line_length_mm
         bias = -20
         ld2 = nf.Get_line_params(th, xintercept, llength, bias)
-        print('Test level:')
         tim2.Dline_ld(ld2,'white')
-        print('EO Test')
         
         ###  draw mm coordinate system
         tim2.Dxy_axes()

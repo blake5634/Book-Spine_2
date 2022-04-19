@@ -34,82 +34,7 @@ d2r = 2*np.pi/360.0
 #       |
 #       V
 ##
-def Get_pix_byXY(img,X,Y,iscale=bpar.scale):
-    #print('Get: {} {}'.format(X,Y))
-    row,col = XY2RC(img,X,Y,iscale==iscale)
-    #if col > 500:
-        #print('  Get_pix_byXY() X:{} Y:{} r:{} c:{}'.format(X,Y,row,col))
-    return(img[row,col])
 
-def Get_pix_byRC(img,row,col):
-    #print('        get pix: R: {} C: {}'.format(row,col))
-    return(img[row,col])
-
-#
-# convert image ctr XY(mm) to X,Y (open CV points)
-#
-def XY2iXiY(img,X,Y,iscale=bpar.scale):
-    if iscale != bpar.scale:   # bpar.mm2pix has scale in it so..
-        f = float(bpar.scale)/float(iscale)
-        X *= f
-        Y *= f
-    row = int( -Y*bpar.mm2pix + int(img.shape[0]/2) )
-    col = int(  X*bpar.mm2pix + int(img.shape[1]/2) )
-    iX = col
-    iY = row
-    #return iX, iY
-##
-## convert image ctr XY(mm) to Row, Col 
-##
-#def XY2RC(img,X,Y,iscale=bpar.scale):
-    #if iscale != bpar.scale:
-        #f = float(bpar.scale)/float(iscale)
-        #X *= f
-        #Y *= f
-    #row = int( -Y*bpar.mm2pix + int(img.shape[0]/2) )
-    #col = int(  X*bpar.mm2pix + int(img.shape[1]/2) )
-    #return row,col
-
-#
-#  Get image bounds in mm  
-#
-def Get_mmBounds(img,iscale=bpar.scale):
-    sh = np.shape(img)  # get rows & cols
-    xmin = -1* (sh[1]*bpar.pix2mm)  # bpar.pix2mm factor includes bpar.scale
-    xmax = -1*xmin
-    ymin = -1* (sh[0]*bpar.pix2mm)
-    ymax = -1*ymin
-    if iscale != bpar.scale:
-        f = float(bpar.scale)/float(bpar.scale)
-        xmin *= f
-        xmax *= f
-        ymin *= f
-        ymax *= f
-    return (xmin, xmax, ymin, ymax)
-#
-#  Draw a line/rect in mm coordinates
-#
-#  if image scale is different from "scale" then use param
-#
-def DLine_mm(img, p1, p2, st_color, width=3,iscale=bpar.scale):
-    p1_pix = XY2iXiY(img, p1[0],p1[1], iscale=iscale)
-    p2_pix = XY2iXiY(img, p2[0],p2[1], iscale=iscale)    # allows for change of scale 
-    cv2.line(img, p1_pix, p2_pix, bpar.colors[st_color], width)
-    
-def DRect_mm(img,  p1, p2, st_color, width=3,iscale=bpar.scale):
-    p1_pix = XY2iXiY(img, p1[0],p1[1], iscale=iscale)
-    p2_pix = XY2iXiY(img, p2[0],p2[1], iscale=iscale)
-    cv2.rectangle(img, p1_pix, p2_pix, bpar.colors[st_color], width)
- 
-#
-#  Return standard image size references
-#    img = unscaled image
-#    scale = int scale factor to be used
-def Get_sizes(img, scale):
-    ish = np.shape(img)
-    simg_width_cols = int(ish[1]/scale)
-    simg_height_rows =  int(ish[0]/scale)
-    return ish, (simg_height_rows, simg_width_cols)
 
 def Get_line_params(th, xintercept, llength, bias, w=None):
     '''
@@ -170,7 +95,8 @@ def Get_line_params(th, xintercept, llength, bias, w=None):
 #
 #   NEW:   All coordinates and radii etc are in mm 
 #
-#    testimage --- an image (not bookimage) to mark up for testing:  must be same size as img.
+#    testimage --- a bookimage object to mark up for testing:  must be same size as img.
+#
 def Get_line_score(img, w, ld, cdist, testimage):
     '''
     img = bookImage() class
@@ -182,13 +108,19 @@ def Get_line_score(img, w, ld, cdist, testimage):
         ld['bias'] = vertical shift of the line center (mm)
     cdist = matrix of color distances (Euclid) btwn VQ centers
     '''
-    #print('\n\nLine Score:   x: {}(mm) , th: {}(deg)'.format( ld['xintercept'], th))
-    #print(' ---   image shape: {}'.format(np.shape(img)))
-    #print('Image sample: {}'.format(img[10,10]))
+    
     img_height_rows = img.rows # height/rows
     img_width_cols = img.cols   
     
     print('xmin/max mm: {:5.1f}, {:5.1f}'.format( ld['xmin'], ld['xmax'])) 
+    
+    ## make sure the "testimage" is same shape as input image (img)
+    assert img.ishape()[0] == testimage.ishape()[0], 'Image shapes differ (rows)- blackout test INVALID'
+    assert img.ishape()[1] == testimage.ishape()[1], 'Image shapes differ (cols)- blackout test INVALID'
+    
+    assert img.image.shape[0] == testimage.image.shape[0], 'Image shapes differ (rows)- blackout test INVALID'
+    assert img.image.shape[1] == testimage.image.shape[1], 'Image shapes differ (cols)- blackout test INVALID'
+
     
     #timg2 = bc.bookImage(testimage, bpar.scale)
     #timg2.Dline_ld(ld,'yellow')    
@@ -203,13 +135,12 @@ def Get_line_score(img, w, ld, cdist, testimage):
     nvals_app = 0 
     
     #pixelInmm = img.scale
+    ##   convert x limits of line from mm to row/col
     dummy, xmin_px = img.XYmm2RC(ld['xmin'],0)
     dummy, xmax_px = img.XYmm2RC(ld['xmax'],0)
     
-    print('GLS: colMin/ColMax (px)',xmin_px,xmax_px)
+    print('GLS: colMin/ColMax (px)',xmin_px, xmax_px)
     
-    assert img.ishape()[0] == testimage.shape[0], 'Image shapes differ (rows)- blackout test INVALID'
-    assert img.ishape()[1] == testimage.shape[1], 'Image shapes differ (cols)- blackout test INVALID'
         
     for col in range(xmin_px,xmax_px):
 
@@ -221,11 +152,16 @@ def Get_line_score(img, w, ld, cdist, testimage):
         if abs(col-col2) > 0: # just a consistency check
             print('somethings wrong!!!')
             quit()
-        print ('GLS:     X: {:5.1f}mm Y: {:5.1f}mm'.format(X0, ymm))
-        print ('GLS:     row: {:}   col {:}'.format(row, col))
+        #print ('GLS:     X:   {:5.1f}mm   Y: {:5.1f}mm'.format(X0, ymm))
+        #print ('GLS:     row: {:5}      col: {:5}  px'.format(row, col))
+        
+        #xmm1 = img.RC2XYmm(row,col)
+        #print ('GLS:     RC->XYmm:  ')
+        #print ('GLS:     X:   {:5.1f}mm   Y: {:5.1f}mm'.format(X0, ymm))
+
         #x = input('ENTER')
         
-        TST_MODE = 'label'  
+        TST_MODE = 'color'  
         
         if not ((row > img_height_rows-1 or row < 0) or (col > img_width_cols-1 or col < 0)): # line not outside image?
             ############################
@@ -240,9 +176,10 @@ def Get_line_score(img, w, ld, cdist, testimage):
                     #
                     #
                     if TST_MODE=='color':
-                        testimage[row1,col] =  (0,0,0) # black out tested pixel
+                        testimage.set_px_RC(row1,col, (0,0,0)) # black out tested pixel
                     if TST_MODE=='label':
-                        testimage[row1,col] =  0 # black out tested pixel
+                        #print('-------------------   GLS: self shape  /  testimg shape / value:' , np.shape(img.image), np.shape(testimage.image), 0)
+                        testimage.set_px_RC(row1,col, 0) # black out tested pixel
             ############################
             # below the line
             for row1 in range(row, row+ld['rVp'],1):
@@ -254,9 +191,9 @@ def Get_line_score(img, w, ld, cdist, testimage):
                     #
                     #
                     if TST_MODE=='color':
-                        testimage[row1,col] =  (0,0,0) # black out tested pixel
+                        testimage.set_px_RC(row1,col, (0,0,0)) # black out tested pixel
                     if TST_MODE=='label':
-                        testimage[row1,col] =  0 # black out tested pixel
+                        testimage.set_px_RC(row1,col, 0) # black out tested pixel
     
     #
     #  If we got enough pixels in our window for meaningful result:
@@ -305,7 +242,7 @@ def Get_line_score(img, w, ld, cdist, testimage):
         diff_score =  99999999999  # a really really bad score
     
     #x = input('\n\n\n[enter] to continue ({:5.2f})'.format(diff_score))
-    cv2.imshow('testimage (blackout data points used)', testimage)
+    cv2.imshow('testimage (blackout data points used)', testimage.image)
     cv2.waitKey(3000)
     return diff_score
                     
