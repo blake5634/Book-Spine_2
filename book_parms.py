@@ -14,21 +14,19 @@ mm2pix = float(1.0)/pix2mm
 
 deriv_win_size =     int(1.0*mm2pix)      # 1mm width
 smooth_size    = -1* int(10*mm2pix)    # <0:   do not smooth
-blur_rad       =     int(7.0*mm2pix)    # to scaled pixels
-if blur_rad%2 == 0:   # make it odd # of pixels
-    blur_rad += 1   
+blur_rad_mm       =     int(7.0)    # image must determine # pixels
 
-KM_Clusters = 10     # number of K-means clusters for color
+KM_Clusters = 9  # number of K-means clusters for color
 
 #
 #   slant.py
 #
-Line_Score_Thresh = 100  # score units (lower is better) 
+Line_Score_Thresh = 0.250 # score units (lower is better) 
 max_gap_mm = 3  #mm   gap btwn lines defining new cluster (slant.py)
 
 # how long is average book?
 book_edge_line_length_mm = 120 # mm  line length checked for edges
-slice_width  = 3 # mm   width examined for color dominance on either side of line
+slice_width  = 8 # mm   width examined for color dominance on either side of line
 row_bias_mm = -20  # mm   (shift line down from Y=0 line)         
 min_line_vals = 25  # min number of points above and below "0" 
 

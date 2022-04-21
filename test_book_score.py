@@ -105,62 +105,127 @@ for pic_filename in img_paths:
     
     
     xvals = []
+    ybiasvals = []
     scores = []
     
-    for x in range(-70,150,3):
+    for x in range(-100,150,6):
+        for y in range(-30,30,6):
         
-        
-        
-        ###################################################################   Test Line 
-        # make up a line       y = m0*x + b0
-        
-        xintercept = 80 #mm        
-        ybias_mm = -12
-        th = 145
-        # get line params
-        ld = nf.Get_line_params(label_img, th, x, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
-        
-        # get the score
-        lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
-        
-        xvals.append(x)
-        scores.append(lscore)
+            
+            
+            ###################################################################   Test Line 
+            # make up a line       y = m0*x + b0
+            
+            xintercept = 80 #mm        
+            ybias_mm = -12
+            th = 145
+            # get line params
+            ld = nf.Get_line_params(label_img, th, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
+            
+            # get the score
+            lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
+            
+            xvals.append(x)
+            ybiasvals.append(y)
+            scores.append(lscore)
         
     xmin = xvals[np.argmin(scores)]
+    ymin = ybiasvals[np.argmin(scores)]
     smin = np.min(scores)
         
+    ## rank the lines by score
+    #pairs = zip(xvals,scores)
+    #lpairs = list(pairs)
+    #lpairs = sorted(lpairs, key = lambda x: x[1])
+    
+    #print('Ranked Book Report: ')
+    #for p in lpairs:
+        #x = p[0]
+        #s = p[1]
+        #l = '*'*int(20*min(1.0,s))            
+        #print('X: {:6.2f}  score: {:6.3f}, {:}'.format(x,s, l))
     #line_disp_image = lcolor_img.icopy()
     line_disp_image = img_orig.icopy()
     
     ld = nf.Get_line_params(line_disp_image, th, xmin, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
 
-    print('best book found: x:{:} score{:}'.format(xmin,smin))
+    print('best book found: x:{:5.2f}  y:{:5.2f} score{:5.2f}'.format(xmin,ymin,smin)) 
     
-    print('X: {} Y: {} th: {} score: {:5.3f}'.format(xmin, ybias_mm, th, smin))  
+    
     print('Book Report: ')
     for i,s in enumerate(scores):
-        l = '*'*int(20*min(1.0,s))            
-        print('X: {:4.2f}  score: {:}'.format(xvals[i], l))
+        l = '*'*int(20*min(1.0,s))
+        x = xvals[i]
+        y = ybiasvals[i]
+        print('X: {:6.2f} Y: {:6.2f}  score: {:6.3f}, {:}'.format(x,y,s, l))
+        
+        
+        
     #
-    #   Draw the testing line and bounds 
-    # 
-        
-    colcode = nf.score2color(smin)
-    if colcode == None:
-        print('None is the color!')
-        colcode = 'white'
-
-    # new line draw feature of bookImage class!
-    line_disp_image.Dline_ld(ld, colcode)
+    #    Find the local minima
+    #       lowest score is best
     
-    # draw window above and below the line:
-    ld['ybias'] += ld['rV']
-    line_disp_image.Dline_ld(ld, 'blue')    
-    ld['ybias'] -= 2*ld['rV']
-    line_disp_image.Dline_ld(ld, 'green')
-    ld['ybias'] += ld['rV']
+    #sminima = []
+    #xlocs = []
+    #smin1 = 100.0
+    #xmin1 = x
+    #peak = True    # a set of high values between minima
+    #for i,x in enumerate(xvals):
+        #if scores[i] < 1.0:
+            #peak = False
+            #if scores[i] < smin1:
+                #smin1 = scores[i]
+                #xmin1 = x
+        #else:
+            #if not peak:             
+                #sminima.append(smin1)
+                #xlocs.append(xmin1)
+                #peak = True
+            #smin1 =100.0   # reset for next local min
+    #if not peak:  # if we ended NOT in a peak
+        #sminima.append(smin1)
+        #xlocs.append(xmin1)
         
         
+    #print('Local minima report: ')
+    ## draw lines for each local min
+    #for i,x in enumerate(xlocs):
+        #l = '*'*int(20*min(1.0,sminima[i]))
+            
+        #print('X: {:6.2f}  score: {:6.3f}, {:}'.format(x,sminima[i],l))
+        
+        
+    MAX_LINE_SCORE = 0.240
+    
+    for i,s in enumerate(scores):
+        #
+        #   Draw the testing lines and bounds of best book locs 
+        # 
+        if s < MAX_LINE_SCORE:
+            l = '*'*int(20*min(1.0,s))
+            x = xvals[i]
+            y = ybiasvals[i]
+            ld = nf.Get_line_params(line_disp_image, th, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
+
+            colcode = nf.score2color(smin)
+            if colcode == None:
+                print('None is the color!')
+                colcode = 'white'
+
+            # new line draw feature of bookImage class!
+            line_disp_image.Dline_ld(ld, colcode)
+            
+            # draw window above and below the line:
+            ld['ybias'] += ld['rV']
+            line_disp_image.Dline_ld(ld, 'blue')    
+            ld['ybias'] -= 2*ld['rV']
+            line_disp_image.Dline_ld(ld, 'green')
+            ld['ybias'] += ld['rV']
+            
+            # draw red square at center of line
+            line_disp_image.Dmark_mm((ld['xintercept'],ld['ybias']),3,'red')
+            
+            
     sh = line_disp_image.ishape()
     print('Output(line_disp_image):  {:} rows, {:} cols.'.format(sh[0],sh[1]))    
   

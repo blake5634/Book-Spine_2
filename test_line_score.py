@@ -37,7 +37,7 @@ for pic_filename in img_paths:
     #
     #img = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
     img_orig = bc.bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), 0.2) 
-    #tsti = img_orig.icopy()  # copy of original for visualization 
+    #line_disp_image = img_orig.icopy()  # copy of original for visualization 
 
     sh = img_orig.ishape()
     print('Original:   {:} rows, {:} cols.'.format(sh[0],sh[1]))
@@ -63,8 +63,9 @@ for pic_filename in img_paths:
     
     if blur:
         img_orig_sm.blur_rad_mm(bpar.blur_rad_mm) 
-    else:
-        img2 = img_orig_sm.icopy()  # no blur 
+    
+    img2 = img_orig.icopy()  # no blur 
+    img2 = img_orig_sm.icopy()  # no blur 
     
     ############
     #
@@ -105,16 +106,17 @@ for pic_filename in img_paths:
     ###################################################################   Test Line 
     # make up a line       y = m0*x + b0
     
-    xintercept = 83 #mm        
+    xintercept = 80 #mm        
     ybias_mm = -12
     th = 145
     # get line params
-    ld = nf.Get_line_params(th, xintercept, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
+    ld = nf.Get_line_params(label_img, th, xintercept, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
     
     # get the score
     lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
     
-    tsti = lcolor_img.icopy()
+    #line_disp_image = lcolor_img.icopy()
+    line_disp_image = img_orig.icopy()
     
     print('X: {} Y: {} th: {} score: {:5.3f}'.format(xintercept, ybias_mm, th, lscore))        
     
@@ -128,31 +130,32 @@ for pic_filename in img_paths:
         colcode = 'white'
 
     # new line draw feature of bookImage class!
-    tsti.Dline_ld(ld, colcode)
+    line_disp_image.Dline_ld(ld, colcode)
     
     # draw window above and below the line:
     ld['ybias'] += ld['rV']
-    tsti.Dline_ld(ld, 'blue')    
+    line_disp_image.Dline_ld(ld, 'blue')    
     ld['ybias'] -= 2*ld['rV']
-    tsti.Dline_ld(ld, 'green')
+    line_disp_image.Dline_ld(ld, 'green')
+    ld['ybias'] += ld['rV']
         
         
-    sh = tsti.ishape()
-    print('Output(tsti):  {:} rows, {:} cols.'.format(sh[0],sh[1]))    
+    sh = line_disp_image.ishape()
+    print('Output(line_disp_image):  {:} rows, {:} cols.'.format(sh[0],sh[1]))    
   
     ###################################################################3
     #
     #  Draw some debugging graphics          TODO:   move this inside bookImage()
     #
-    tsti.Dxy_axes()
+    line_disp_image.Dxy_axes()
         
         
     #draw the "ybias_mm" line2
-    (xmin, xmax, ymin, ymax) = tsti.Get_mmBounds()
+    (xmin, xmax, ymin, ymax) = line_disp_image.Get_mmBounds()
     ## Draw the effective midpoint in Y (row_bias_mm)
-    tsti.Dline_mm((xmin+20,ybias_mm), (xmax-20,ybias_mm), 'red')
+    line_disp_image.Dline_mm((xmin+20,ybias_mm), (xmax-20,ybias_mm), 'red')
 
 
     title='test image'
-    cv2.imshow(title, tsti.image)
+    cv2.imshow(title, line_disp_image.image)
     cv2.waitKey(0) 

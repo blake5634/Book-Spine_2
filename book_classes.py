@@ -41,10 +41,10 @@ class bookImage():
     def ishape(self):        
         sh = self.image.shape
         
-        print('   Image scale info:')
-        print('   Scale Factor: ', self.scale, ' mm/pixel')
-        print('   rows/cols: ',      sh)
-        print('   height/width(mm)', self.height_mm, self.width_mm )
+        #print('   Image scale info:')
+        #print('   Scale Factor: ', self.scale, ' mm/pixel')
+        #print('   rows/cols: ',      sh)
+        #print('   height/width(mm)', self.height_mm, self.width_mm )
     
         return sh
         

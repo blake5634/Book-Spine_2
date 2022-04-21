@@ -36,8 +36,9 @@ d2r = 2*np.pi/360.0
 ##
 
 
-def Get_line_params(th, xintercept, llength, bias, w=None):
+def Get_line_params(imgObj, th, xintercept, llength, bias, w=None):
     '''
+    imgObj = the bookImage instance for scale
     th = angle in degrees
     xintercept = in mm
     llength = length of line (mm)
@@ -51,7 +52,7 @@ def Get_line_params(th, xintercept, llength, bias, w=None):
     d['xintercept'] = xintercept
     d['m0'] = np.tan(th*d2r) # slope (mm/mm)
     d['b0'] = -d['m0']*xintercept  # mm
-    d['ybias'] = bias
+    d['ybias'] = bias 
     
     
     # compute xmin and xmax
@@ -66,8 +67,8 @@ def Get_line_params(th, xintercept, llength, bias, w=None):
     #  rV = distance to upper bound (vertical) mm
     if w:
         d['w'] = w
-        d['rV'] = abs(w/np.sin(th*bpar.d2r-np.pi/2)) # mm  (a delta so there's no origin offset)
-        tmp = int(d['rV'] * bpar.mm2pix)     # pixels
+        d['rV'] = abs(w/np.sin(th*d2r-np.pi/2)) # mm  (a delta so there's no origin offset)
+        tmp = int(d['rV'] / imgObj.scale)     #  mm / mmPerPx 
         if tmp < 2:  # prevent tiny windows
             tmp = 2
         d['rVp'] = tmp
@@ -139,7 +140,7 @@ def Get_line_score(img, w, ld, cdist, testimage):
     dummy, xmin_px = img.XYmm2RC(ld['xmin'],0)
     dummy, xmax_px = img.XYmm2RC(ld['xmax'],0)
     
-    print('GLS: colMin/ColMax (px)',xmin_px, xmax_px)
+    #print('GLS: colMin/ColMax (px)',xmin_px, xmax_px)
     
         
     for col in range(xmin_px,xmax_px):
@@ -172,7 +173,6 @@ def Get_line_score(img, w, ld, cdist, testimage):
                     #print('            Looking at (above): {}, {}'.format(row1,col))
                     #vals_abv.append(Get_pix_byRC(img,row1,col)) # accum. labels in zone above
                     vals_abv.append(img.image[row1,col]) # accum. labels in zone above
-                    nvals_app+=1
                     #
                     #
                     if TST_MODE=='color':
@@ -187,12 +187,12 @@ def Get_line_score(img, w, ld, cdist, testimage):
                     #print('            Looking at (below): {}, {}'.format(row1,col))
                     #vals_bel.append(Get_pix_byRC(img,row1,col))
                     vals_bel.append(img.image[row1,col])
-                    nvals_app+=1                
                     #
                     #
                     if TST_MODE=='color':
                         testimage.set_px_RC(row1,col, (0,0,0)) # black out tested pixel
                     if TST_MODE=='label':
+                        #print('-------------------   GLS: self shape  /  testimg shape / value:' , np.shape(img.image), np.shape(testimage.image), 0)
                         testimage.set_px_RC(row1,col, 0) # black out tested pixel
     
     #
@@ -222,8 +222,8 @@ def Get_line_score(img, w, ld, cdist, testimage):
         dom_abv = np.max(cnts_abv)/np.sum(cnts_abv)  # how predominant? (0-1)
         dom_bel = np.max(cnts_bel)/np.sum(cnts_bel)  # how predominant? (0-1)
         
-        print('\n\nGLS: Dominant labels: above: {:5} below: {:5}'.format(dom_lab_abv,dom_lab_bel))
-        print('GLS: Dominance:       above: {:5.3f} below: {:5.3f}\n\n'.format(dom_abv,dom_bel))
+        print('GLS: Dominant labels: above: {:5} below: {:5}'.format(dom_lab_abv,dom_lab_bel))
+        print('GLS: Dominance:       above: {:5.3f} below: {:5.3f}'.format(dom_abv,dom_bel))
         # is the dominant color above line == dom color below?
         Method = bpar.Color_Dist_Method
         if Method == 1:
@@ -243,7 +243,9 @@ def Get_line_score(img, w, ld, cdist, testimage):
     
     #x = input('\n\n\n[enter] to continue ({:5.2f})'.format(diff_score))
     cv2.imshow('testimage (blackout data points used)', testimage.image)
-    cv2.waitKey(3000)
+     
+    print('GLS: Final Line Score: {:5.3f}'.format(diff_score))
+          
     return diff_score
                     
                 
