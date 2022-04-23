@@ -8,6 +8,80 @@ import book_classes as bc
 import book_parms as bpar
 import book_classes as bc
 import matplotlib.pyplot as plt
+import pickle     # for storing pre-computed K-means clusters
+import os as os
+
+
+
+def VQ_pickle(image, N ):
+    #
+    #   Check for a pickle file of combined pre-computed Mech and Robot objects
+    #
+    #  TODO: refactor code to get rid of unused "test" argument
+    pprotocol = 2
+
+    pickle_dir = 'VQ_pickle/'
+
+    if not os.path.isdir(pickle_dir):  # if this doesn't exist, create it.
+        print('Creating a new pickle directory: ./'+pickle_dir)
+        os.mkdir(pickle_dir)
+
+    name = pickle_dir + 'imageVQ' + '_pickle.p'
+
+    print(' pickle: trying to open ', name,' in ', os.getcwd())
+    dumpflg = True
+    pick_payload = []
+    if(os.path.isfile(name)):
+        with open(name, 'rb') as pick:
+            dumpflg = False
+            print('\Trying to read pre-computed VQ codebook and images from '+name)
+            pick_payload = pickle.load(pick)
+            pick.close()
+            print('Successfully read pre-computed VQ codebook and image')
+            print('pickle contained ', len(pick_payload[2]), ' codewords')
+            if len(pick_payload[2]) != N:
+                print('Pickle file has wrong image length')
+                quit()
+                dumpflg = True
+    
+    if dumpflg:
+        #print 'WRONG - quitting, error: ',sys.exc_info()[0]
+        #sys.exit 
+        print(' Storing VQ pickle for '+ '('+name+')')
+        with open(name,'wb') as pf:
+                ############
+                #
+                #  Use KMeans to posterize to N color labels
+                #
+                img0, tmp, ctrs, color_dist = nf.KM(img2.image,N)   
+                pick_payload = [img0, tmp, ctrs, color_dist]
+                pickle.dump(pick_payload, pf, protocol=pprotocol)
+                pf.close()
+    
+    return pick_payload
+
+
+#def check_the_pickle():   # check that two mechanisms have identical DH params
+    #flag = False
+    #if (dh1.shape[0] != dh2.shape[0]):
+        #print('   Wrong number of rows!')
+        #flag = True
+    #else:
+        #for r in range(0,dh1.shape[0]):
+            #for c in [0,1,2,3]:
+                #if(dh1[r,c] != dh2[r,c]):
+                    #flag = True
+    #if(flag):
+        #print('''\n\n -----------------------------------------------------
+                    #DH parameters Differ
+                 #Pickle file is out of date. 
+                   #please remove it and start again
+  #-----------------------------------------------------
+  #''')
+        #quit()
+
+
+
 '''
 Test some new functions for 
 Find books in a bookshelf image
@@ -67,22 +141,25 @@ for pic_filename in img_paths:
     img2 = img_orig.icopy()  # no blur 
     img2 = img_orig_sm.icopy()  # no blur 
     
-    ############
+    
+    
     #
-    #  Use KMeans to posterize to N color labels
+    #  Check for stored KMeans Result and compute if not available
     #
-    N = bpar.KM_Clusters
-    img0, tmp, ctrs, color_dist = nf.KM(img2.image,N)   
-    labelColorImg,  LabelImage, ctrs, color_dist = nf.KM(img2.image,N)   
-    label_img = bc.bookImage(LabelImage,img2.scale)
+    #
+    N = bpar.KM_Clusters  # how many VQ clusters to generate
+    
+    [ labelColorImg,  LabelImage, ctrs, color_dist ] = VQ_pickle(img2.image, N)
+    label_img  = bc.bookImage(LabelImage,img2.scale)
     lcolor_img = bc.bookImage(labelColorImg, img2.scale)
-    #colors_i2  = img2.icopy()
+    
 
     print('label_img.image shape: {}'.format(np.shape(label_img.image)))
     print('label_img.ishape():    {}'.format(label_img.ishape()))
     print('label_img.scale:       {}'.format(label_img.scale))
     print('labelColorImg shape:   {}'.format(np.shape(labelColorImg)))
     
+
     #x = input('ENTER')
     
     #cv2.imshow('labels',img0)
@@ -103,35 +180,34 @@ for pic_filename in img_paths:
     #
     backgnd = nf.Check_background(label_img.image)    
     
-    
+    ldvals = [] # redundant with th,x,y!!
+    thvals = []
     xvals = []
     ybiasvals = []
     scores = []
-    
-    for x in range(-100,150,6):
-        for y in range(-30,30,6):
+    xy_set = ()
+    for theta in range(120,150,10):
+        for x in range(-100,150,20):
+            for y in range(-30,20,15):
+                xy_set.add((x,y))  # get unique points
+                ###################################################################   Test Line 
+                # make up a line       y = m0*x + b0
+              
+                # get line params
+                ld = nf.Get_line_params(label_img, theta, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
+                
+                # get the score
+                lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
+                # store the line and score
+                ldvals.append(ld)
+                thvals.append(theta)
+                xvals.append(x)
+                ybiasvals.append(y)
+                scores.append(lscore)
         
-            
-            
-            ###################################################################   Test Line 
-            # make up a line       y = m0*x + b0
-            
-            xintercept = 80 #mm        
-            ybias_mm = -12
-            th = 145
-            # get line params
-            ld = nf.Get_line_params(label_img, th, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
-            
-            # get the score
-            lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
-            
-            xvals.append(x)
-            ybiasvals.append(y)
-            scores.append(lscore)
-        
-    xmin = xvals[np.argmin(scores)]
-    ymin = ybiasvals[np.argmin(scores)]
-    smin = np.min(scores)
+    #xmin = xvals[np.argmin(scores)]
+    #ymin = ybiasvals[np.argmin(scores)]
+    #smin = np.min(scores)
         
     ## rank the lines by score
     #pairs = zip(xvals,scores)
@@ -145,58 +221,60 @@ for pic_filename in img_paths:
         #l = '*'*int(20*min(1.0,s))            
         #print('X: {:6.2f}  score: {:6.3f}, {:}'.format(x,s, l))
     #line_disp_image = lcolor_img.icopy()
+    
+    # image we will use to display lines
     line_disp_image = img_orig.icopy()
     
-    ld = nf.Get_line_params(line_disp_image, th, xmin, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
+    #ld = nf.Get_line_params(line_disp_image, theta, xmin, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
 
-    print('best book found: x:{:5.2f}  y:{:5.2f} score{:5.2f}'.format(xmin,ymin,smin)) 
+    #print('best book found: x:{:5.2f}  y:{:5.2f} score{:5.2f}'.format(xmin,ymin,smin)) 
     
     
-    print('Book Report: ')
-    for i,s in enumerate(scores):
-        l = '*'*int(20*min(1.0,s))
-        x = xvals[i]
-        y = ybiasvals[i]
-        print('X: {:6.2f} Y: {:6.2f}  score: {:6.3f}, {:}'.format(x,y,s, l))
+    #print('Book Report: ')
+    #for i,s in enumerate(scores):
+        #l = '*'*int(20*min(1.0,s))
+        #x = xvals[i]
+        #y = ybiasvals[i]
+        #print('X: {:6.2f} Y: {:6.2f}  score: {:6.3f}, {:}'.format(x,y,s, l))
         
         
         
     #
-    #    Find the local minima
+    #    Find the local minima along horizontal line
     #       lowest score is best
     
-    #sminima = []
-    #xlocs = []
-    #smin1 = 100.0
-    #xmin1 = x
-    #peak = True    # a set of high values between minima
-    #for i,x in enumerate(xvals):
-        #if scores[i] < 1.0:
-            #peak = False
-            #if scores[i] < smin1:
-                #smin1 = scores[i]
-                #xmin1 = x
-        #else:
-            #if not peak:             
-                #sminima.append(smin1)
-                #xlocs.append(xmin1)
-                #peak = True
-            #smin1 =100.0   # reset for next local min
-    #if not peak:  # if we ended NOT in a peak
-        #sminima.append(smin1)
-        #xlocs.append(xmin1)
-        
-        
-    #print('Local minima report: ')
-    ## draw lines for each local min
-    #for i,x in enumerate(xlocs):
-        #l = '*'*int(20*min(1.0,sminima[i]))
+    #if False:
+        #sminima = []
+        #xlocs = []
+        #smin1 = 100.0
+        #xmin1 = x
+        #peak = True    # a set of high values between minima
+        #for i,x in enumerate(xvals):
+            #if scores[i] < 1.0:
+                #peak = False
+                #if scores[i] < smin1:
+                    #smin1 = scores[i]
+                    #xmin1 = x
+            #else:
+                #if not peak:             
+                    #sminima.append(smin1)
+                    #xlocs.append(xmin1)
+                    #peak = True
+                #smin1 =100.0   # reset for next local min
+        #if not peak:  # if we ended NOT in a peak
+            #sminima.append(smin1)
+            #xlocs.append(xmin1)
             
-        #print('X: {:6.2f}  score: {:6.3f}, {:}'.format(x,sminima[i],l))
+            
+        #print('Local minima report: ')
+        ## draw lines for each local min
+        #for i,x in enumerate(xlocs):
+            #l = '*'*int(20*min(1.0,sminima[i]))
+                
+            #print('X: {:6.2f}  score: {:6.3f}, {:}'.format(x,sminima[i],l))
         
         
-    MAX_LINE_SCORE = 0.240
-    
+    MAX_LINE_SCORE = bpar.Line_Score_Thresh
     for i,s in enumerate(scores):
         #
         #   Draw the testing lines and bounds of best book locs 
@@ -205,6 +283,7 @@ for pic_filename in img_paths:
             l = '*'*int(20*min(1.0,s))
             x = xvals[i]
             y = ybiasvals[i]
+            th = thvals[i]
             ld = nf.Get_line_params(line_disp_image, th, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
 
             colcode = nf.score2color(smin)
@@ -236,10 +315,10 @@ for pic_filename in img_paths:
     line_disp_image.Dxy_axes()
         
         
-    #draw the "ybias_mm" line2
-    (xmin, xmax, ymin, ymax) = line_disp_image.Get_mmBounds()
-    ## Draw the effective midpoint in Y (row_bias_mm)
-    line_disp_image.Dline_mm((xmin+20,ybias_mm), (xmax-20,ybias_mm), 'red')
+    ##draw the "ybias_mm" line2
+    #(xmin, xmax, ymin, ymax) = line_disp_image.Get_mmBounds()
+    ### Draw the effective midpoint in Y (row_bias_mm)
+    #line_disp_image.Dline_mm((xmin+20,ybias_mm), (xmax-20,ybias_mm), 'red')
 
 
     title='test image'
