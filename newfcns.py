@@ -113,7 +113,7 @@ def Get_line_score(img, w, ld, cdist, testimage):
     img_height_rows = img.rows # height/rows
     img_width_cols = img.cols   
     
-    print('xmin/max mm: {:5.1f}, {:5.1f}'.format( ld['xmin'], ld['xmax'])) 
+    #print('xmin/max mm: {:5.1f}, {:5.1f}'.format( ld['xmin'], ld['xmax'])) 
     
     ## make sure the "testimage" is same shape as input image (img)
     assert img.ishape()[0] == testimage.ishape()[0], 'Image shapes differ (rows)- blackout test INVALID'
@@ -150,7 +150,9 @@ def Get_line_score(img, w, ld, cdist, testimage):
         ymm = ld['m0']*X0 + ld['b0'] + ld['ybias']  # evaluate the line
         row, col2 = img.XYmm2RC(X0,ymm)    # convert ymm to row 
         
-        if abs(col-col2) > 0: # just a consistency check
+        
+        #print('row: {:}  col: {:}  col2: {:}'.format(row,col,col2))
+        if abs(col-col2) > 1: # just a consistency check
             print('somethings wrong!!!')
             quit()
         #print ('GLS:     X:   {:5.1f}mm   Y: {:5.1f}mm'.format(X0, ymm))
@@ -195,11 +197,14 @@ def Get_line_score(img, w, ld, cdist, testimage):
                         #print('-------------------   GLS: self shape  /  testimg shape / value:' , np.shape(img.image), np.shape(testimage.image), 0)
                         testimage.set_px_RC(row1,col, 0) # black out tested pixel
     
+    
+    GLS_VERBOSE = False
     #
     #  If we got enough pixels in our window for meaningful result:
     #
-    print('GLS: len: vals above',len(vals_abv))
-    print('GLS: len: vals below',len(vals_bel))
+    if GLS_VERBOSE:
+        print('GLS: len: vals above',len(vals_abv))
+        print('GLS: len: vals below',len(vals_bel))
     
     if len(vals_abv) > bpar.min_line_vals and len(vals_bel) > bpar.min_line_vals: 
         #print('shape vals: {}'.format(np.shape(vals_abv)))
@@ -211,19 +216,20 @@ def Get_line_score(img, w, ld, cdist, testimage):
         #print('labels above, below: (1st 100 samples)')
         #print(vals_abv[0:100], vals_bel[0:100])
         
-        print('')
-        print('GLS: labels above: ', labs_abv)
-        print('GLS: counts above: ', cnts_abv)
-        print('GLS: labels below: ', labs_bel)
-        print('GLS: counts below: ', cnts_bel)
-        
+        if GLS_VERBOSE:
+            print('')
+            print('GLS: labels above: ', labs_abv)
+            print('GLS: counts above: ', cnts_abv)
+            print('GLS: labels below: ', labs_bel)
+            print('GLS: counts below: ', cnts_bel)
+            
         dom_lab_abv = labs_abv[np.argmax(cnts_abv)]   # which is most common label above?
         dom_lab_bel = labs_bel[np.argmax(cnts_bel)]
         dom_abv = np.max(cnts_abv)/np.sum(cnts_abv)  # how predominant? (0-1)
         dom_bel = np.max(cnts_bel)/np.sum(cnts_bel)  # how predominant? (0-1)
-        
-        print('GLS: Dominant labels: above: {:5} below: {:5}'.format(dom_lab_abv,dom_lab_bel))
-        print('GLS: Dominance:       above: {:5.3f} below: {:5.3f}'.format(dom_abv,dom_bel))
+        if GLS_VERBOSE:
+            print('GLS: Dominant labels: above: {:5} below: {:5}'.format(dom_lab_abv,dom_lab_bel))
+            print('GLS: Dominance:       above: {:5.3f} below: {:5.3f}'.format(dom_abv,dom_bel))
         # is the dominant color above line == dom color below?
         Method = bpar.Color_Dist_Method
         if Method == 1:
@@ -243,8 +249,8 @@ def Get_line_score(img, w, ld, cdist, testimage):
     
     #x = input('\n\n\n[enter] to continue ({:5.2f})'.format(diff_score))
     cv2.imshow('testimage (blackout data points used)', testimage.image)
-     
-    print('GLS: Final Line Score: {:5.3f}'.format(diff_score))
+    if GLS_VERBOSE:
+        print('GLS: Final Line Score: {:5.3f}'.format(diff_score))
           
     return diff_score
                     
@@ -252,12 +258,12 @@ def Get_line_score(img, w, ld, cdist, testimage):
 ##   convert score to a color
 def score2color(score):
     c = None
-    brackets = [0.1,   0.14,    .18,    .22]
+    brackets = [0.1, 0.2, 0.4, 0.5, 0.6, 1.05]  # color by fraction of threshold
     
     scorescale = 1
     
-    brackets = [y*scorescale  for y in brackets]
-    colors  = ['red', 'green', 'yellow', 'white']
+    brackets = [y*bpar.Line_Score_Thresh  for y in brackets]
+    colors  = ['red', 'green', 'blue', 'yellow', 'white', 'black']
     for i,t in enumerate(brackets):
         if score < brackets[i]:
             c = colors[i]

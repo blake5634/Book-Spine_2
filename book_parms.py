@@ -16,7 +16,7 @@ deriv_win_size =     int(1.0*mm2pix)      # 1mm width
 smooth_size    = -1* int(10*mm2pix)    # <0:   do not smooth
 blur_rad_mm       =     int(7.0)    # image must determine # pixels
 
-KM_Clusters = 20  # number of K-means clusters for color
+KM_Clusters = 12  # number of K-means clusters for color
 
 #
 #   slant.py
@@ -25,8 +25,8 @@ KM_Clusters = 20  # number of K-means clusters for color
 #
 #    LINE SCORE THRESHOLD
 #
-Line_Score_Thresh = 0.700 # score units (lower is better) 
-
+Line_Score_Thresh = 0.300 # score units (lower is better) 
+topNbyscore = 30   # show only the N best lines
 
 max_gap_mm = 3  #mm   gap btwn lines defining new cluster (slant.py)
 

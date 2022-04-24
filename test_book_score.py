@@ -178,18 +178,22 @@ for pic_filename in img_paths:
     #
     #   Find background label
     #
-    backgnd = nf.Check_background(label_img.image)    
+    backgnd = nf.Check_background(label_img.image)   
     
+    
+    MAX_LINE_SCORE = bpar.Line_Score_Thresh
+
     ldvals = [] # redundant with th,x,y!!
     thvals = []
     xvals = []
     ybiasvals = []
     scores = []
-    xy_set = ()
-    for theta in range(120,150,10):
-        for x in range(-100,150,20):
-            for y in range(-30,20,15):
-                xy_set.add((x,y))  # get unique points
+    xy_set = set()
+    
+
+    for theta in range(120,170,3):
+        for x in range(-110,140,10):
+            for y in range(-50,40,10):
                 ###################################################################   Test Line 
                 # make up a line       y = m0*x + b0
               
@@ -198,12 +202,16 @@ for pic_filename in img_paths:
                 
                 # get the score
                 lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
-                # store the line and score
-                ldvals.append(ld)
-                thvals.append(theta)
-                xvals.append(x)
-                ybiasvals.append(y)
-                scores.append(lscore)
+                
+                # if score is low enough store the line and score
+                if lscore < MAX_LINE_SCORE:
+                    ldvals.append(ld)
+                    thvals.append(theta)
+                    xvals.append(x)
+                    ybiasvals.append(y)
+                    scores.append(lscore)
+                    xy_set.add((x,y) )     # the points that have >=1 good line
+
         
     #xmin = xvals[np.argmin(scores)]
     #ymin = ybiasvals[np.argmin(scores)]
@@ -273,36 +281,87 @@ for pic_filename in img_paths:
                 
             #print('X: {:6.2f}  score: {:6.3f}, {:}'.format(x,sminima[i],l))
         
-        
-    MAX_LINE_SCORE = bpar.Line_Score_Thresh
+    #######################################################################################3
+    #
+    #  sort all lines by score
+    #
+  
+    sortbuf = []
     for i,s in enumerate(scores):
-        #
-        #   Draw the testing lines and bounds of best book locs 
-        # 
-        if s < MAX_LINE_SCORE:
-            l = '*'*int(20*min(1.0,s))
-            x = xvals[i]
-            y = ybiasvals[i]
-            th = thvals[i]
-            ld = nf.Get_line_params(line_disp_image, th, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
+        sortbuf.append([s, ldvals[i]])
+    sortbuf.sort(key=lambda x: x[0],reverse=False)
+    
+    for i in range(bpar.topNbyscore):
+        s = sortbuf[i][0]
+        ld = sortbuf[i][1]
+        
+        print('Line: x0: {:4.1f}  y0: {:4.1f} th: {:4.1f} sc: {:5.3f}'.format(ld['xintercept'],ld['ybias'],ld['th'],s))
+        
+        colcode = nf.score2color(s)
+        # new line draw feature of bookImage class!
+        line_disp_image.Dline_ld(ld, colcode)
+        
+        # draw window above and below the line:
+        ld['ybias'] += ld['rV']
+        line_disp_image.Dline_ld(ld, 'black', 1)    
+        ld['ybias'] -= 2*ld['rV']
+        line_disp_image.Dline_ld(ld, 'black', 1)
+        ld['ybias'] += ld['rV']
+        
+        # draw red square at center of line
+        line_disp_image.Dmark_mm((ld['xintercept'],ld['ybias']),3,'red')
+        
 
-            colcode = nf.score2color(smin)
-            if colcode == None:
-                print('None is the color!')
-                colcode = 'white'
+    
+    #
+    #   find the best line at each XY point
+    #
+    #bestlines = []
+    #bestscores = []
+    #for j,xy in enumerate(xy_set):
+        #bestPtScore = 999999999
+        #bestline = None
+        #for i,s in enumerate(scores):        
+            #x = xvals[i]
+            #y = ybiasvals[i]
+            #th = thvals[i]
+            #if (x,y) == xy:
+                 #if s < bestPtScore:
+                     #bestPtScore = s
+                     #bestline = ldvals[i]  # line descriptor with best score at this XY pt.
+        #bestscores.append(bestPtScore)
+        #bestlines.append(bestline)
+        
+        
+    #for i,s in enumerate(bestscores):
+        ##
+        ##   Draw the testing lines and bounds of best book locs 
+        ## 
+        #if True:
+            #l = '*'*int(20*min(1.0,s))
+            #ld = bestlines[i]
+            ##x = ld['xintercept']
+            ##y = ld['ybias']
+            ##th = ld['th']
+            ##ld = nf.Get_line_params(line_disp_image, th, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
 
-            # new line draw feature of bookImage class!
-            line_disp_image.Dline_ld(ld, colcode)
+            #colcode = nf.score2color(s)
+            #if colcode == None:
+                #print('None is the color!')
+                #colcode = 'white'
+
+            ## new line draw feature of bookImage class!
+            #line_disp_image.Dline_ld(ld, colcode)
             
-            # draw window above and below the line:
-            ld['ybias'] += ld['rV']
-            line_disp_image.Dline_ld(ld, 'blue')    
-            ld['ybias'] -= 2*ld['rV']
-            line_disp_image.Dline_ld(ld, 'green')
-            ld['ybias'] += ld['rV']
+            ## draw window above and below the line:
+            #ld['ybias'] += ld['rV']
+            #line_disp_image.Dline_ld(ld, 'black', 1)    
+            #ld['ybias'] -= 2*ld['rV']
+            #line_disp_image.Dline_ld(ld, 'black', 1)
+            #ld['ybias'] += ld['rV']
             
-            # draw red square at center of line
-            line_disp_image.Dmark_mm((ld['xintercept'],ld['ybias']),3,'red')
+            ## draw red square at center of line
+            #line_disp_image.Dmark_mm((ld['xintercept'],ld['ybias']),3,'red')
             
             
     sh = line_disp_image.ishape()

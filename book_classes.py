@@ -72,13 +72,13 @@ class bookImage():
         return self.image[row,col]
     
     def XYmm2RC(self,Xmm,Ymm):        
-        row = int(self.rows/2  - Ymm/self.scale)
-        col = int(self.cols/2  + Xmm/self.scale)
+        row = int(self.rows/2  - Ymm/self.scale + 0.5)
+        col = int(self.cols/2  + Xmm/self.scale + 0.5)
         return (row, col)
     
     def RC2XYmm(self,row,col):
-        Xmm =   col*self.scale    - self.ctXmm
-        Ymm =   -1*row*self.scale + self.ctYmm
+        Xmm =   col*self.scale    - self.ctXmm - 0.5
+        Ymm =   -1*row*self.scale + self.ctYmm - 0.5
         return (Xmm, Ymm)
         
     # create a new bookImage scaled down by factor
@@ -115,10 +115,10 @@ class bookImage():
         ymax = self.height_mm/2
         return (xmin, xmax, ymin, ymax)
             
-    def Dline_ld(self,ld,color):  # draw line based on line dict params
+    def Dline_ld(self,ld,color,width=3):  # draw line based on line dict params
         p1 = (ld['xmin'], ld['m0']*ld['xmin'] + ld['b0'] + ld['ybias'])
         p2 = (ld['xmax'], ld['m0']*ld['xmax'] + ld['b0'] + ld['ybias'])
-        self.Dline_mm(p1,p2,color)
+        self.Dline_mm(p1,p2,color,width)
         
     #  Draw a line/rect in mm coordinates
     #
