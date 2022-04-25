@@ -53,7 +53,7 @@ def VQ_pickle(image, N ):
                 #
                 #  Use KMeans to posterize to N color labels
                 #
-                img0, tmp, ctrs, color_dist = nf.KM(img2.image,N)   
+                img0, tmp, ctrs, color_dist = nf.KM(img2.image, N)   
                 pick_payload = [img0, tmp, ctrs, color_dist]
                 pickle.dump(pick_payload, pf, protocol=pprotocol)
                 pf.close()
@@ -61,24 +61,30 @@ def VQ_pickle(image, N ):
     return pick_payload
 
 
-#def check_the_pickle():   # check that two mechanisms have identical DH params
-    #flag = False
-    #if (dh1.shape[0] != dh2.shape[0]):
-        #print('   Wrong number of rows!')
-        #flag = True
-    #else:
-        #for r in range(0,dh1.shape[0]):
-            #for c in [0,1,2,3]:
-                #if(dh1[r,c] != dh2[r,c]):
-                    #flag = True
-    #if(flag):
-        #print('''\n\n -----------------------------------------------------
-                    #DH parameters Differ
-                 #Pickle file is out of date. 
-                   #please remove it and start again
-  #-----------------------------------------------------
-  #''')
-        #quit()
+
+def linescores_pickle(fname):
+    #
+    #   Check for a pickle file of combined pre-computed Mech and Robot objects
+    #
+    #  TODO: refactor code to get rid of unused "test" argument
+    pprotocol = 2
+
+    print(' pickle: trying to open ', name,' in ', os.getcwd())
+    dumpflg = True
+    pick_payload = []
+    if(os.path.isfile(fname)):
+        with open(name, 'rb') as pick:
+            print('\Trying to read pre-computed VQ codebook and images from '+name)
+            pick_payload = pickle.load(pick)
+            pick.close()
+            print('Successfully read pre-computed VQ codebook and image')
+            print('pickle contained ', len(pick_payload[2]), ' codewords') 
+        return pick_payload
+    else:
+        return [name, None, None, None, None, None]  # signal no pickle file
+    
+    
+
 
 
 
@@ -190,28 +196,53 @@ for pic_filename in img_paths:
     scores = []
     xy_set = set()
     
-
-    for theta in range(120,170,3):
-        for x in range(-110,140,10):
-            for y in range(-50,40,10):
-                ###################################################################   Test Line 
-                # make up a line       y = m0*x + b0
-              
-                # get line params
-                ld = nf.Get_line_params(label_img, theta, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
-                
-                # get the score
-                lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
-                
-                # if score is low enough store the line and score
-                if lscore < MAX_LINE_SCORE:
-                    ldvals.append(ld)
-                    thvals.append(theta)
-                    xvals.append(x)
-                    ybiasvals.append(y)
-                    scores.append(lscore)
-                    xy_set.add((x,y) )     # the points that have >=1 good line
-
+    
+    #
+    #  check for and load a pickle file to save time
+    #
+    pickle_dir = 'VQ_pickle/'
+    if not os.path.isdir(pickle_dir):  # if this doesn't exist, create it.
+        print('Creating a new pickle directory: ./'+pickle_dir)
+        os.mkdir(pickle_dir)
+    name = pickle_dir + 'line_scores' + '_pickle.p'        #print 'WRONG - quitting, error: ',sys.exc_info()[0]
+    
+    [ldvals, thvals, xvals, ybiasvals, scores, xy_set] = linescores_pickle(name)
+    
+    # but if there is no pickle file:
+    if thvals == None:
+        # rdef these because they were set to "None" as a signal by linescores_pickle
+        ldvals = [] # redundant with th,x,y!!
+        thvals = []
+        xvals = []
+        ybiasvals = []
+        scores = []
+        xy_set = set()        #sys.exit 
+        print(' Creating and storing line score pickle for '+ '('+name+')')
+        with open(name,'wb') as pf:   
+            for theta in range(120,170,3):
+                for x in range(-110,140,10):
+                    for y in range(-50,40,10):
+                        ###################################################################   Test Line 
+                        # make up a line       y = m0*x + b0
+                    
+                        # get line params
+                        ld = nf.Get_line_params(label_img, theta, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
+                        
+                        # get the score
+                        lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
+                        
+                        # if score is low enough store the line and score
+                        if lscore < MAX_LINE_SCORE:
+                            ldvals.append(ld)
+                            thvals.append(theta)
+                            xvals.append(x)
+                            ybiasvals.append(y)
+                            scores.append(lscore)
+                            xy_set.add((x,y) )     # the points that have >=1 good line
+            pprotocol = 2
+            pick_payload = [ldvals, thvals, xvals, ybiasvals, scores, xy_set]
+            pickle.dump(pick_payload, pf, protocol=pprotocol)
+            pf.close()
         
     #xmin = xvals[np.argmin(scores)]
     #ymin = ybiasvals[np.argmin(scores)]
@@ -311,8 +342,16 @@ for pic_filename in img_paths:
         # draw red square at center of line
         line_disp_image.Dmark_mm((ld['xintercept'],ld['ybias']),3,'red')
         
-
-    
+    #############################################################################33
+    #
+    #   cluster the best lines
+    #
+    book_clustersXY, counts = nf.KM_ld(sortbuf[0:bpar.topNbyscore], 5)
+    print('total clusters:',book_clustersXY)
+    for c in book_clustersXY:
+        print('book cluster: ',c,)
+        line_disp_image.Dmark_mm((c[0],c[1]),5,'green')
+        
     #
     #   find the best line at each XY point
     #

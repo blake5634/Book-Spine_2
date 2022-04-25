@@ -474,12 +474,12 @@ def KM(img,N):
     img_width=img.shape[1]
     pixels = np.float32(img.reshape(-1, 3))
     # set up some params
-    n_colors = N
+    n_centers = N
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, .05)
     flags = cv2.KMEANS_RANDOM_CENTERS
     # perform the clustering
-    _, labels, (centers) = cv2.kmeans(pixels, n_colors, None, criteria, 10, flags)
-    _, counts = np.unique(labels, return_counts=True)
+    _, labels, (centers)  = cv2.kmeans(pixels, n_centers, None, criteria, 10, flags)
+    _, counts             = np.unique(labels, return_counts=True)
     
     
     # dominant color is the palette color which occurs most frequently on the quantized image:
@@ -511,6 +511,34 @@ def KM(img,N):
     newimg = newimg.reshape(img.shape)
     
     return [newimg, labeled_image, centers, dist]
+
+
+
+#   
+#  Cluster scored lines by K-means
+#     according to their XY center
+#
+def KM_ld(sc_lines,n_centers):
+    '''
+    sc_lines  =  list of [s, ld ] lists
+    '''
+    xycenters = np.zeros((len(sc_lines),2),dtype=np.float32)
+    for i,scl in enumerate(sc_lines):
+        x = scl[1]['xintercept']
+        y = scl[1]['ybias']
+        xycenters[i][0] = np.float32(x)
+        xycenters[i][1] = np.float32(y)
+    
+    # set up some params
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, .05)
+    flags = cv2.KMEANS_RANDOM_CENTERS
+    number_attempts = 10
+    # perform the clustering
+    _, labels, (centers)  = cv2.kmeans(xycenters, n_centers, None, criteria, number_attempts, flags)
+    _, counts             = np.unique(labels, return_counts=True)
+      
+    return centers,counts
+
 
 
 def smooth(x,window_len=11,window='hanning'):
