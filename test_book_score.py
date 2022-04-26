@@ -346,30 +346,50 @@ for pic_filename in img_paths:
     #
     #   cluster the best lines
     #
-    book_clustersXY, counts = nf.KM_ld(sortbuf[0:bpar.topNbyscore], 5)
-    print('total clusters:',book_clustersXY)
-    for c in book_clustersXY:
-        print('book cluster: ',c,)
+    book_clustersXYTH, counts = nf.KM_ld(sortbuf[0:bpar.topNbyscore], bpar.line_VQ_Nclusters)
+    print('total clusters:')
+    for c in book_clustersXYTH:
+        stmp = '[ '
+        for xy in c:
+            stmp += '{:5.1f},'.format(xy)
+        stmp = stmp[:-1] + ']'
+        print('    ',stmp)
         line_disp_image.Dmark_mm((c[0],c[1]),5,'green')
         
     #
-    #   find the best line at each XY point
+    #   find the best line NEAR each KM cluster point
     #
-    #bestlines = []
-    #bestscores = []
-    #for j,xy in enumerate(xy_set):
-        #bestPtScore = 999999999
-        #bestline = None
-        #for i,s in enumerate(scores):        
-            #x = xvals[i]
-            #y = ybiasvals[i]
-            #th = thvals[i]
-            #if (x,y) == xy:
-                 #if s < bestPtScore:
-                     #bestPtScore = s
-                     #bestline = ldvals[i]  # line descriptor with best score at this XY pt.
-        #bestscores.append(bestPtScore)
-        #bestlines.append(bestline)
+    side = bpar.KMneighborDX
+    ang = bpar.KMneighborDth
+    
+    r = int(side/2.0)
+    
+    superclusters = []
+    superscores =   []
+    # search in the neighborhood of each cluster for a better "cluster"
+    for c in book_clustersXYTH:
+        x = c[0]
+        y = c[1]
+        th = c[2]
+        ld = nf.Get_line_params(label_img, th, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
+        clscoremin = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img )    # img, w, ld, cdist, testimage
+        ldmin = ld
+        for dx in range(-r,r,2):   # mm neighborhood
+            for dy in range(-r,r,2):  # mm neighborhood
+                for dth in range(-int(ang/2),int(ang/2),3):  # theta neighborhood
+                    ld = nf.Get_line_params(label_img, th+dth, x+dx, bpar.book_edge_line_length_mm , y+dy,  bpar.slice_width)  #llen=80, w=10
+                    sc = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img)
+                    if  sc < clscoremin:
+                        clscoremin = sc
+                        ldmin = ld
+
+        superclusters.append(ldmin)
+        superscores.append(clscoremin)
+        
+    for c in superclusters:
+        x = c['xintercept']
+        y = c['ybias'] 
+        line_disp_image.Dmark_mm((x,y),7,'blue')
         
         
     #for i,s in enumerate(bestscores):

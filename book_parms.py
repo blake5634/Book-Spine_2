@@ -26,7 +26,6 @@ KM_Clusters = 12  # number of K-means clusters for color
 #    LINE SCORE THRESHOLD
 #
 Line_Score_Thresh = 0.300 # score units (lower is better) 
-topNbyscore = 30   # show only the N best lines
 
 max_gap_mm = 3  #mm   gap btwn lines defining new cluster (slant.py)
 
@@ -39,6 +38,25 @@ min_line_vals = 25  # min number of points above and below "0"
 #  method 1 == Euclidean RGB distance
 #  method 2 == 350 if labels different, 0 otherwise
 Color_Dist_Method = 1
+
+###################
+#
+#  Rank based selection of line candidates
+topNbyscore = 50   # show only the N best lines
+
+
+##########
+#
+#   Line cluster params
+line_VQ_Nclusters = 7
+
+###########
+#
+#  clusterneighborhood search
+
+KMneighborDX =  12  #mm
+KMneighborDth = 20 # deg
+
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 colors = {'black':(0,0,0), 'white':(255,255,255), 'blue':(255,0,0), 'green':(0,255,0), 'red':(0,0,255),'yellow':(0,255,255)}

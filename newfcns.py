@@ -522,19 +522,20 @@ def KM_ld(sc_lines,n_centers):
     '''
     sc_lines  =  list of [s, ld ] lists
     '''
-    xycenters = np.zeros((len(sc_lines),2),dtype=np.float32)
+    xyth_centers = np.zeros((len(sc_lines),3),dtype=np.float32)
     for i,scl in enumerate(sc_lines):
-        x = scl[1]['xintercept']
-        y = scl[1]['ybias']
-        xycenters[i][0] = np.float32(x)
-        xycenters[i][1] = np.float32(y)
-    
+        ld = scl[1]
+        x = ld['xintercept']
+        y = ld['ybias']
+        xyth_centers[i][0] = np.float32(x)
+        xyth_centers[i][1] = np.float32(y)
+        xyth_centers[i][2] = np.float32(ld['th'])
     # set up some params
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, .05)
     flags = cv2.KMEANS_RANDOM_CENTERS
     number_attempts = 10
     # perform the clustering
-    _, labels, (centers)  = cv2.kmeans(xycenters, n_centers, None, criteria, number_attempts, flags)
+    _, labels, (centers)  = cv2.kmeans(xyth_centers, n_centers, None, criteria, number_attempts, flags)
     _, counts             = np.unique(labels, return_counts=True)
       
     return centers,counts
