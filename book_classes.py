@@ -38,6 +38,11 @@ class bookImage():
     def icopy(self):
         return cp.deepcopy(self,{})
     
+    def write(self):
+        name = input('Enter an image file name: (.png supplied)')
+        name += '.png'
+        cv2.imwrite(name, self.image)
+        
     def ishape(self):        
         sh = self.image.shape
         

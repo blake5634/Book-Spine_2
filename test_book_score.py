@@ -158,7 +158,7 @@ for pic_filename in img_paths:
     [ labelColorImg,  LabelImage, ctrs, color_dist ] = VQ_pickle(img2.image, N)
     label_img  = bc.bookImage(LabelImage,img2.scale)
     lcolor_img = bc.bookImage(labelColorImg, img2.scale)
-    
+    lcolor_img.write()
 
     print('label_img.image shape: {}'.format(np.shape(label_img.image)))
     print('label_img.ishape():    {}'.format(label_img.ishape()))
