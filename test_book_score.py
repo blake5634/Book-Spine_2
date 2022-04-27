@@ -244,22 +244,6 @@ for pic_filename in img_paths:
             pickle.dump(pick_payload, pf, protocol=pprotocol)
             pf.close()
         
-    #xmin = xvals[np.argmin(scores)]
-    #ymin = ybiasvals[np.argmin(scores)]
-    #smin = np.min(scores)
-        
-    ## rank the lines by score
-    #pairs = zip(xvals,scores)
-    #lpairs = list(pairs)
-    #lpairs = sorted(lpairs, key = lambda x: x[1])
-    
-    #print('Ranked Book Report: ')
-    #for p in lpairs:
-        #x = p[0]
-        #s = p[1]
-        #l = '*'*int(20*min(1.0,s))            
-        #print('X: {:6.2f}  score: {:6.3f}, {:}'.format(x,s, l))
-    #line_disp_image = lcolor_img.icopy()
     
     # image we will use to display lines
     line_disp_image = img_orig.icopy()
@@ -268,49 +252,6 @@ for pic_filename in img_paths:
 
     #print('best book found: x:{:5.2f}  y:{:5.2f} score{:5.2f}'.format(xmin,ymin,smin)) 
     
-    
-    #print('Book Report: ')
-    #for i,s in enumerate(scores):
-        #l = '*'*int(20*min(1.0,s))
-        #x = xvals[i]
-        #y = ybiasvals[i]
-        #print('X: {:6.2f} Y: {:6.2f}  score: {:6.3f}, {:}'.format(x,y,s, l))
-        
-        
-        
-    #
-    #    Find the local minima along horizontal line
-    #       lowest score is best
-    
-    #if False:
-        #sminima = []
-        #xlocs = []
-        #smin1 = 100.0
-        #xmin1 = x
-        #peak = True    # a set of high values between minima
-        #for i,x in enumerate(xvals):
-            #if scores[i] < 1.0:
-                #peak = False
-                #if scores[i] < smin1:
-                    #smin1 = scores[i]
-                    #xmin1 = x
-            #else:
-                #if not peak:             
-                    #sminima.append(smin1)
-                    #xlocs.append(xmin1)
-                    #peak = True
-                #smin1 =100.0   # reset for next local min
-        #if not peak:  # if we ended NOT in a peak
-            #sminima.append(smin1)
-            #xlocs.append(xmin1)
-            
-            
-        #print('Local minima report: ')
-        ## draw lines for each local min
-        #for i,x in enumerate(xlocs):
-            #l = '*'*int(20*min(1.0,sminima[i]))
-                
-            #print('X: {:6.2f}  score: {:6.3f}, {:}'.format(x,sminima[i],l))
         
     #######################################################################################3
     #
@@ -392,37 +333,19 @@ for pic_filename in img_paths:
         line_disp_image.Dmark_mm((x,y),7,'blue')
         
         
-    #for i,s in enumerate(bestscores):
-        ##
-        ##   Draw the testing lines and bounds of best book locs 
-        ## 
-        #if True:
-            #l = '*'*int(20*min(1.0,s))
-            #ld = bestlines[i]
-            ##x = ld['xintercept']
-            ##y = ld['ybias']
-            ##th = ld['th']
-            ##ld = nf.Get_line_params(line_disp_image, th, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
-
-            #colcode = nf.score2color(s)
-            #if colcode == None:
-                #print('None is the color!')
-                #colcode = 'white'
-
-            ## new line draw feature of bookImage class!
-            #line_disp_image.Dline_ld(ld, colcode)
-            
-            ## draw window above and below the line:
-            #ld['ybias'] += ld['rV']
-            #line_disp_image.Dline_ld(ld, 'black', 1)    
-            #ld['ybias'] -= 2*ld['rV']
-            #line_disp_image.Dline_ld(ld, 'black', 1)
-            #ld['ybias'] += ld['rV']
-            
-            ## draw red square at center of line
-            #line_disp_image.Dmark_mm((ld['xintercept'],ld['ybias']),3,'red')
-            
-            
+    #
+    #  Identify book boundary / OBB surrounding the supercluster
+    #
+        
+    imgblobs = label_img.icopy()
+    mask = imgblobs.isequal(3)  #  VQ label 3
+    imgblobs.image = imgblobs.image[mask]
+    title = 'blobs of label 3'
+    cv2.imshow(title, imgblobs.image)
+    cv2.waitKey(0)
+        
+        
+        
     sh = line_disp_image.ishape()
     print('Output(line_disp_image):  {:} rows, {:} cols.'.format(sh[0],sh[1]))    
   

@@ -35,6 +35,17 @@ class bookImage():
         
         # validate image type here
         
+    def isequal(self,x):
+        if self.type != 'mono':
+            print('illegal image type for isequal()')
+            quit()
+        mask = int(np.zeros((self.rows,self.cols)))
+        for r in range(self.rows):
+            for c in range(self.cols):
+                if self.image[r,c] == x:
+                    mask[r,c] = 1
+        return mask
+    
     def icopy(self):
         return cp.deepcopy(self,{})
     
