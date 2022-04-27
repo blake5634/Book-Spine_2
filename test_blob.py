@@ -5,8 +5,10 @@ import sys as sys
 # https://stackoverflow.com/questions/64021471/how-to-expand-a-particular-color-blob-with-4-pixels
 
 winname = 'interactive color blobs'
-erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
+esize = 10
+dsize = 12
+erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (esize,esize))
+dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dsize,dsize))
 # dilate_kernel size = (<desired expansion> + (<erode_kernel size> - 1) / 2) * 2 + 1
 
 def on_mouse(event, x, y, flag, img):
