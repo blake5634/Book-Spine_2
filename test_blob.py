@@ -2,6 +2,9 @@ import numpy as np
 import cv2
 import sys as sys
 
+print('OpenCV version: ', cv2.__version__)
+
+
 # https://stackoverflow.com/questions/64021471/how-to-expand-a-particular-color-blob-with-4-pixels
 
 winname = 'interactive color blobs'
@@ -21,24 +24,35 @@ def on_mouse(event, x, y, flag, img):
         #   with multichannel images
         channels_img = cv2.split(img)
         channels_sel = cv2.split(selection)
+        csel = []
+        cimg = []
+        print('Shape: channels_sel: ', np.shape(channels_sel))
+        print('Shape: channels_sel[1]: ',  np.shape(channels_sel[1]))
+        print('Type:  channels_sel[1]: ', type( channels_sel[1]))
         for i in range(len(channels_sel)):
-            # remove noise pixels of the same color
-            channels_sel[i] = cv2.erode(channels_sel[i], erode_kernel)
-
+            # remove noise pixels of the same color 
+            
+            #channels_sel[i] = cv2.erode(channels_sel[i], erode_kernel)
+            x = cv2.erode(channels_sel[i], erode_kernel) 
+            #channels_sel[i] = x
+            csel.append(x)
+            
             # now expand selected blob
             # note that dilation kernel must compensate erosion so 
             #   add erosion kernel size to it
-            channels_sel[i] = cv2.dilate(channels_sel[i], dilate_kernel)
-
+            csel[i] = cv2.dilate(csel[i], dilate_kernel)
+            x = cv2.dilate(csel[i], dilate_kernel)
+            cimg.append(x)
+            
             # replace fragment on original image with expanded blob
-            mask = cv2.threshold(channels_sel[i], 0, 255, cv2.THRESH_BINARY_INV)[1]
-            channels_img[i] = cv2.bitwise_and(channels_img[i], mask)
-            channels_img[i] = cv2.bitwise_or(channels_img[i], channels_sel[i])
+            mask = cv2.threshold(csel[i], 0, 255, cv2.THRESH_BINARY_INV)[1]
+            cimg[i] = cv2.bitwise_and(cimg[i], mask)
+            cimg[i] = cv2.bitwise_or(cimg[i], csel[i])
 
         # merge processed channels back
-        img = cv2.merge(channels_img)
-        selection = cv2.merge(channels_sel)
-        cv2.imshow(winname, img)
+        imgProc = cv2.merge(cimg)
+        selection = cv2.merge(csel)
+        cv2.imshow('processed selection', imgProc)
         cv2.imshow('selection', selection)
 
 

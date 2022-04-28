@@ -144,7 +144,7 @@ for pic_filename in img_paths:
     if blur:
         img_orig_sm.blur_rad_mm(bpar.blur_rad_mm) 
     
-    img2 = img_orig.icopy()  # no blur 
+    #img2 = img_orig.icopy()  # no blur 
     img2 = img_orig_sm.icopy()  # no blur 
     
     
@@ -159,6 +159,9 @@ for pic_filename in img_paths:
     label_img  = bc.bookImage(LabelImage,img2.scale)
     lcolor_img = bc.bookImage(labelColorImg, img2.scale)
     lcolor_img.write()
+    label_img.write()
+    
+    quit()  ########################3  temp
 
     print('label_img.image shape: {}'.format(np.shape(label_img.image)))
     print('label_img.ishape():    {}'.format(label_img.ishape()))

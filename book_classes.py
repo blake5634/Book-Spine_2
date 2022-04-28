@@ -50,7 +50,7 @@ class bookImage():
         return cp.deepcopy(self,{})
     
     def write(self):
-        name = input('Enter an image file name: (.png supplied)')
+        name = input('Enter an image file name: (w/o .png)')
         name += '.png'
         cv2.imwrite(name, self.image)
         
