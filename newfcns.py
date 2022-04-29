@@ -6,6 +6,10 @@ import book_classes as bc
 import matplotlib.pyplot as plt
 import numpy as np
 from time import sleep
+
+import pickle     # for storing pre-computed K-means clusters
+import sys as sys
+import os as os
 #
 #  new functions by BH
 #
@@ -227,6 +231,9 @@ def Get_line_score(img, w, ld, cdist, testimage):
         dom_lab_bel = labs_bel[np.argmax(cnts_bel)]
         dom_abv = np.max(cnts_abv)/np.sum(cnts_abv)  # how predominant? (0-1)
         dom_bel = np.max(cnts_bel)/np.sum(cnts_bel)  # how predominant? (0-1)
+        scoredetails = [dom_lab_abv, dom_abv, dom_lab_bel, dom_bel]
+
+        
         if GLS_VERBOSE:
             print('GLS: Dominant labels: above: {:5} below: {:5}'.format(dom_lab_abv,dom_lab_bel))
             print('GLS: Dominance:       above: {:5.3f} below: {:5.3f}'.format(dom_abv,dom_bel))
@@ -252,7 +259,7 @@ def Get_line_score(img, w, ld, cdist, testimage):
     if GLS_VERBOSE:
         print('GLS: Final Line Score: {:5.3f}'.format(diff_score))
           
-    return diff_score
+    return diff_score, scoredetails
                     
                 
 ##   convert score to a color
@@ -605,4 +612,81 @@ def smooth(x,window_len=11,window='hanning'):
     z = y[endchop:-endchop]
     print('Orig len: {}  New len: {}'.format(len(x), len(z)))
     return z
+
+
+
+
+def VQ_pickle(image, N ):
+    #
+    #   Check for a pickle file of combined pre-computed Mech and Robot objects
+    #
+    #  TODO: refactor code to get rid of unused "test" argument
+    pprotocol = 2
+
+    pickle_dir = 'VQ_pickle/'
+
+    if not os.path.isdir(pickle_dir):  # if this doesn't exist, create it.
+        print('Creating a new pickle directory: ./'+pickle_dir)
+        os.mkdir(pickle_dir)
+
+    name = pickle_dir + 'imageVQ' + '_pickle.p'
+
+    print(' pickle: trying to open ', name,' in ', os.getcwd())
+    dumpflg = True
+    pick_payload = []
+    if(os.path.isfile(name)):
+        with open(name, 'rb') as pick:
+            dumpflg = False
+            print('\Trying to read pre-computed VQ codebook and images from '+name)
+            pick_payload = pickle.load(pick)
+            pick.close()
+            print('Successfully read pre-computed VQ codebook and image')
+            print('pickle contained ', len(pick_payload[2]), ' codewords')
+            if len(pick_payload[2]) != N:
+                print('Pickle file has wrong image length')
+                quit()
+                dumpflg = True
+    
+    if dumpflg:
+        #print 'WRONG - quitting, error: ',sys.exc_info()[0]
+        #sys.exit 
+        print(' Storing VQ pickle for '+ '('+name+')')
+        with open(name,'wb') as pf:
+                ############
+                #
+                #  Use KMeans to posterize to N color labels
+                #
+                img0, tmp, ctrs, color_dist = nf.KM(img2.image, N)   
+                pick_payload = [img0, tmp, ctrs, color_dist]
+                pickle.dump(pick_payload, pf, protocol=pprotocol)
+                pf.close()
+    
+    return pick_payload
+
+
+
+def linescores_pickle(fname):
+    #
+    #   Check for a pickle file of combined pre-computed Mech and Robot objects
+    #
+    #  TODO: refactor code to get rid of unused "test" argument
+    pprotocol = 2
+
+    print(' pickle: trying to open ', fname,' in ', os.getcwd())
+    #dumpflg = True
+    pick_payload = []
+    if(os.path.isfile(fname)):
+        with open(fname, 'rb') as pick:
+            print('\Trying to read pre-computed VQ codebook and images from '+fname)
+            pick_payload = pickle.load(pick)
+            pick.close()
+            print('Successfully read pre-computed VQ codebook and image')
+            print('pickle contained ', len(pick_payload[2]), ' codewords') 
+        return pick_payload
+    else:
+        return [fname, None, None, None, None, None]  # signal no pickle file
+    
+    
+
+
 

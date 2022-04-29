@@ -16,7 +16,7 @@ deriv_win_size =     int(1.0*mm2pix)      # 1mm width
 smooth_size    = -1* int(10*mm2pix)    # <0:   do not smooth
 blur_rad_mm       =     int(7.0)    # image must determine # pixels
 
-KM_Clusters = 12  # number of K-means clusters for color
+KM_Clusters = 20  # number of K-means clusters for color
 
 #
 #   slant.py
@@ -56,6 +56,15 @@ line_VQ_Nclusters = 7
 
 KMneighborDX =  12  #mm
 KMneighborDth = 20 # deg
+
+
+###############
+#
+#  Cluster cleanup and bookfinding
+#
+
+esize = 5  # erode px
+dsize = 12  # dilate px
 
 
 font = cv2.FONT_HERSHEY_SIMPLEX

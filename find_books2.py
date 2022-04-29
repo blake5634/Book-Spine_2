@@ -8,24 +8,71 @@ import book_classes as bc
 import book_parms as bpar
 import book_classes as bc
 import matplotlib.pyplot as plt
+
+
 import pickle     # for storing pre-computed K-means clusters
+import sys as sys
 import os as os
 
+#############################################################
+#
+#  read and pre-process image
+#
+#
 
+img_paths = gb.glob('tiny/target.jpg')       # actual
+d2r = 2*np.pi/360.0  #deg to rad
 
-'''
-Test some new functions for 
-Find books in a bookshelf image
+if (len(img_paths) < 1):
+    print('No files found')
+    quit()
+for pic_filename in img_paths:
+    print('looking at '+pic_filename)
+    #img_gray, img = pre_process(pic_filename)
+    #cv2.IMREAD_GRAYSCALE
+    
+    #
+    #  read in the image
+    #
+    #img = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
+    img_orig = bc.bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), 0.2) 
+    #line_disp_image = img_orig.icopy()  # copy of original for visualization 
 
+    sh = img_orig.ishape()
+    print('Original:   {:} rows, {:} cols.'.format(sh[0],sh[1]))
+    
+    #
+    #
+    #  scale the image 
+    #
+    #     scale factor imported from newfcns.py
+    #
+    
+    img_orig_sm = img_orig.downvert(2)     # scale down rows and cols by 2
+         
+    sh = img_orig_sm.ishape()
+    print('Scaled:    {:} rows, {:} cols.'.format(sh[0],sh[1]))        
+        
+    ############
+    #
+    #   blur  
+    #
+    
+    blur = False
+    
+    if blur:
+        img_orig_sm.blur_rad_mm(bpar.blur_rad_mm) 
+    
+    img2 = img_orig.icopy()  # no blur 
+    img2 = img_orig_sm.icopy()  # no blur 
+    
 
- **********  look for major lines at different angles
- 
- 4/22   adapt to use book_classes
-''' 
- 
+#############################################################
+#
+#  VQ the colors and pickle them
+#
+#
 
-#img_paths = gb.glob('tiny/target.jpg')
-#img_paths = gb.glob('tiny/testimage2.png')   # simplified 
 img_paths = gb.glob('tiny/target.jpg')       # actual
 d2r = 2*np.pi/360.0  #deg to rad
 
@@ -84,37 +131,29 @@ for pic_filename in img_paths:
     label_img  = bc.bookImage(LabelImage,img2.scale)
     lcolor_img = bc.bookImage(labelColorImg, img2.scale)
     print('Enter name for label color image (tcolor) e.g.)')
-    lcolor_img.write()
+    #lcolor_img.write()
     #label_img.write()
     
-    quit()  ########################3  temp
-
-    print('label_img.image shape: {}'.format(np.shape(label_img.image)))
-    print('label_img.ishape():    {}'.format(label_img.ishape()))
-    print('label_img.scale:       {}'.format(label_img.scale))
-    print('labelColorImg shape:   {}'.format(np.shape(labelColorImg)))
+    # if redo VQ mode(!)
+    #quit()  ########################3  temp
     
-
-    #x = input('ENTER')
     
-    #cv2.imshow('labels',img0)
-    #cv2.waitKey(3000)
-    
-    imct = nf.Gen_cluster_colors(ctrs)
-    if True:
+    ##   Generate an image showing the cluster colors as a palette
+    if False:
+        imct = nf.Gen_cluster_colors(ctrs)
         cv2.imshow("cluster colors (10 max)",imct)
-        cv2.waitKey(1000)
-    nfound = 0
+        cv2.waitKey(1000)  
     
-    
-    sh2 = label_img.ishape()   # new class uses ishape()
-    print('Labeled:  {:} rows, {:} cols.'.format(sh2[0],sh2[1])) 
-    
+
+#############################################################
+#
+#  find lines
+#
+# 
     #
     #   Find background label
     #
     backgnd = nf.Check_background(label_img.image)   
-    
     
     MAX_LINE_SCORE = bpar.Line_Score_Thresh
 
@@ -158,7 +197,7 @@ for pic_filename in img_paths:
                         ld = nf.Get_line_params(label_img, theta, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
                         
                         # get the score
-                        lscore, lsdeets = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
+                        lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
                         
                         # if score is low enough store the line and score
                         if lscore < MAX_LINE_SCORE:
@@ -177,16 +216,12 @@ for pic_filename in img_paths:
     # image we will use to display lines
     line_disp_image = img_orig.icopy()
     
-    #ld = nf.Get_line_params(line_disp_image, theta, xmin, bpar.book_edge_line_length_mm , ybias_mm,  bpar.slice_width)  #llen=80, w=10
 
-    #print('best book found: x:{:5.2f}  y:{:5.2f} score{:5.2f}'.format(xmin,ymin,smin)) 
-    
-        
-    #######################################################################################3
-    #
-    #  sort all lines by score
-    #
-  
+#############################################################
+#
+#  rank and select best lines
+#
+#   
     sortbuf = []
     for i,s in enumerate(scores):
         sortbuf.append([s, ldvals[i]])
@@ -196,7 +231,7 @@ for pic_filename in img_paths:
         s = sortbuf[i][0]
         ld = sortbuf[i][1]
         
-        print('Line: x0: {:4.1f}  y0: {:4.1f} th: {:4.1f} sc: {:5.3f}'.format(ld['xintercept'],ld['ybias'],ld['th'],s))
+        #print('Line: x0: {:4.1f}  y0: {:4.1f} th: {:4.1f} sc: {:5.3f}'.format(ld['xintercept'],ld['ybias'],ld['th'],s))
         
         colcode = nf.score2color(s)
         # new line draw feature of bookImage class!
@@ -212,10 +247,12 @@ for pic_filename in img_paths:
         # draw red square at center of line
         line_disp_image.Dmark_mm((ld['xintercept'],ld['ybias']),3,'red')
         
-    #############################################################################33
-    #
-    #   cluster the best lines
-    #
+
+#############################################################
+#
+# VQ line groups 
+#
+#
     book_clustersXYTH, counts = nf.KM_ld(sortbuf[0:bpar.topNbyscore], bpar.line_VQ_Nclusters)
     print('total clusters:')
     for c in book_clustersXYTH:
@@ -226,14 +263,15 @@ for pic_filename in img_paths:
         print('    ',stmp)
         line_disp_image.Dmark_mm((c[0],c[1]),5,'green')
         
-    #
-    #   find the best line NEAR each KM cluster point
-    #
-    side = bpar.KMneighborDX
+#############################################################
+#
+# Find the BEST line in the neighborhood of the line group cluster codeword 
+#             (superclusters)
+#
+    side = bpar.KMneighborDX   # how far to search around the line cluster cw
     ang = bpar.KMneighborDth
     
-    r = int(side/2.0)
-    
+    r = int(side/2.0)    
     superclusters = []
     superscores =   []
     # search in the neighborhood of each cluster for a better "cluster"
@@ -242,13 +280,13 @@ for pic_filename in img_paths:
         y = c[1]
         th = c[2]
         ld = nf.Get_line_params(label_img, th, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
-        clscoremin, csdeets = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img )    # img, w, ld, cdist, testimage
+        clscoremin = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img )    # img, w, ld, cdist, testimage
         ldmin = ld
         for dx in range(-r,r,2):   # mm neighborhood
             for dy in range(-r,r,2):  # mm neighborhood
                 for dth in range(-int(ang/2),int(ang/2),3):  # theta neighborhood
                     ld = nf.Get_line_params(label_img, th+dth, x+dx, bpar.book_edge_line_length_mm , y+dy,  bpar.slice_width)  #llen=80, w=10
-                    sc,sdeets = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img)
+                    sc = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img)
                     if  sc < clscoremin:
                         clscoremin = sc
                         ldmin = ld
@@ -262,35 +300,31 @@ for pic_filename in img_paths:
         line_disp_image.Dmark_mm((x,y),7,'blue')
         
         
-    #
-    #  Identify book boundary / OBB surrounding the supercluster
-    #
-        
-    imgblobs = label_img.icopy()
-    mask = imgblobs.isequal(3)  #  VQ label 3
-    imgblobs.image = imgblobs.image[mask]
-    title = 'blobs of label 3'
-    cv2.imshow(title, imgblobs.image)
-    cv2.waitKey(0)
-        
-        
-        
-    sh = line_disp_image.ishape()
-    print('Output(line_disp_image):  {:} rows, {:} cols.'.format(sh[0],sh[1]))    
-  
-    ###################################################################3
-    #
-    #  Draw some debugging graphics          TODO:   move this inside bookImage()
-    #
-    line_disp_image.Dxy_axes()
-        
-        
-    ##draw the "ybias_mm" line2
-    #(xmin, xmax, ymin, ymax) = line_disp_image.Get_mmBounds()
-    ### Draw the effective midpoint in Y (row_bias_mm)
-    #line_disp_image.Dline_mm((xmin+20,ybias_mm), (xmax-20,ybias_mm), 'red')
+
+#############################################################
+#
+#  identify color blobs centered around supercluster lines
+#
+#
+
+    for c in superclusters:        
+        x = c['xintercept']
+        y = c['ybias'] 
+        r = 2 #mm
+        labs = set()
+        scscore, scsdeets = nf.Get_line_score(label_img, bpar.slice_width, c, color_dist, lcolor_img)
+        print('Supercluster: ({:4.1f},{:4.2f}), score: {:5.2f}'.format(x,y,scscore))
+        print('    dom label: ', scsdeets)
+                
+                
+#############################################################
+#
+##  evaluate (somehow) book ID quality 
+#
+#
 
 
     title='test image'
     cv2.imshow(title, line_disp_image.image)
     cv2.waitKey(0) 
+

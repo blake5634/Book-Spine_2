@@ -2,16 +2,16 @@ import numpy as np
 import cv2
 import sys as sys
 
+import book_parms as bpar
+
 print('OpenCV version: ', cv2.__version__)
 
 
 # https://stackoverflow.com/questions/64021471/how-to-expand-a-particular-color-blob-with-4-pixels
 
 winname = 'interactive color blobs'
-esize = 10
-dsize = 12
-erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (esize,esize))
-dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dsize,dsize))
+erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,  (bpar.esize, bpar.esize))
+dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (bpar.dsize, bpar.dsize))
 # dilate_kernel size = (<desired expansion> + (<erode_kernel size> - 1) / 2) * 2 + 1
 
 def on_mouse(event, x, y, flag, img):
@@ -53,7 +53,7 @@ def on_mouse(event, x, y, flag, img):
         imgProc = cv2.merge(cimg)
         selection = cv2.merge(csel)
         cv2.imshow('processed selection', imgProc)
-        cv2.imshow('selection', selection)
+        #cv2.imshow('selection', selection)
 
 
 name = sys.argv[1]
