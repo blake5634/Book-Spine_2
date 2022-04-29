@@ -54,8 +54,8 @@ line_VQ_Nclusters = 7
 #
 #  clusterneighborhood search
 
-KMneighborDX =  12  #mm
-KMneighborDth = 20 # deg
+KMneighborDX =  10  #mm
+KMneighborDth = 15 # deg
 
 
 ###############

@@ -71,55 +71,7 @@ for pic_filename in img_paths:
 #
 #  VQ the colors and pickle them
 #
-#
-
-img_paths = gb.glob('tiny/target.jpg')       # actual
-d2r = 2*np.pi/360.0  #deg to rad
-
-if (len(img_paths) < 1):
-    print('No files found')
-    quit()
-for pic_filename in img_paths:
-    print('looking at '+pic_filename)
-    #img_gray, img = pre_process(pic_filename)
-    #cv2.IMREAD_GRAYSCALE
-    
-    #
-    #  read in the image
-    #
-    #img = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
-    img_orig = bc.bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), 0.2) 
-    #line_disp_image = img_orig.icopy()  # copy of original for visualization 
-
-    sh = img_orig.ishape()
-    print('Original:   {:} rows, {:} cols.'.format(sh[0],sh[1]))
-    
-    #
-    #
-    #  scale the image 
-    #
-    #     scale factor imported from newfcns.py
-    #
-    
-    img_orig_sm = img_orig.downvert(2)     # scale down rows and cols by 2
-         
-    sh = img_orig_sm.ishape()
-    print('Scaled:    {:} rows, {:} cols.'.format(sh[0],sh[1]))        
-        
-    ############
-    #
-    #   blur  
-    #
-    
-    blur = False
-    
-    if blur:
-        img_orig_sm.blur_rad_mm(bpar.blur_rad_mm) 
-    
-    #img2 = img_orig.icopy()  # no blur 
-    img2 = img_orig_sm.icopy()  # no blur 
-    
-    
+# 
     
     #
     #  Check for stored KMeans Result and compute if not available
@@ -127,21 +79,21 @@ for pic_filename in img_paths:
     #
     N = bpar.KM_Clusters  # how many VQ clusters to generate
     
-    [ labelColorImg,  LabelImage, ctrs, color_dist ] = nf.VQ_pickle(img2.image, N)
+    [ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist ] = nf.VQ_pickle(img2.image, N)
     label_img  = bc.bookImage(LabelImage,img2.scale)
     lcolor_img = bc.bookImage(labelColorImg, img2.scale)
     print('Enter name for label color image (tcolor) e.g.)')
     #lcolor_img.write()
-    #label_img.write()
-    
+    #quit()
+        
     # if redo VQ mode(!)
     #quit()  ########################3  temp
     
     
     ##   Generate an image showing the cluster colors as a palette
-    if False:
-        imct = nf.Gen_cluster_colors(ctrs)
-        cv2.imshow("cluster colors (10 max)",imct)
+    if True:
+        imct = nf.Gen_cluster_colors(VQ_color_ctrs)
+        cv2.imshow("cluster colors ",imct)
         cv2.waitKey(1000)  
     
 
@@ -256,7 +208,7 @@ for pic_filename in img_paths:
     book_clustersXYTH, counts = nf.KM_ld(sortbuf[0:bpar.topNbyscore], bpar.line_VQ_Nclusters)
     print('total clusters:')
     for c in book_clustersXYTH:
-        stmp = '[ '
+        stmp = '[ '  # make a fake string printout 
         for xy in c:
             stmp += '{:5.1f},'.format(xy)
         stmp = stmp[:-1] + ']'
@@ -275,18 +227,19 @@ for pic_filename in img_paths:
     superclusters = []
     superscores =   []
     # search in the neighborhood of each cluster for a better "cluster"
+    print('Searching cluster neighborhoods ...')
     for c in book_clustersXYTH:
         x = c[0]
         y = c[1]
         th = c[2]
         ld = nf.Get_line_params(label_img, th, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
-        clscoremin = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img )    # img, w, ld, cdist, testimage
+        clscoremin, scdeets = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img )    # img, w, ld, cdist, testimage
         ldmin = ld
         for dx in range(-r,r,2):   # mm neighborhood
             for dy in range(-r,r,2):  # mm neighborhood
                 for dth in range(-int(ang/2),int(ang/2),3):  # theta neighborhood
                     ld = nf.Get_line_params(label_img, th+dth, x+dx, bpar.book_edge_line_length_mm , y+dy,  bpar.slice_width)  #llen=80, w=10
-                    sc = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img)
+                    sc, scdeets = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img)
                     if  sc < clscoremin:
                         clscoremin = sc
                         ldmin = ld
@@ -298,8 +251,6 @@ for pic_filename in img_paths:
         x = c['xintercept']
         y = c['ybias'] 
         line_disp_image.Dmark_mm((x,y),7,'blue')
-        
-        
 
 #############################################################
 #
@@ -311,10 +262,62 @@ for pic_filename in img_paths:
         x = c['xintercept']
         y = c['ybias'] 
         r = 2 #mm
-        labs = set()
         scscore, scsdeets = nf.Get_line_score(label_img, bpar.slice_width, c, color_dist, lcolor_img)
         print('Supercluster: ({:4.1f},{:4.2f}), score: {:5.2f}'.format(x,y,scscore))
-        print('    dom label: ', scsdeets)
+        print('    dom label: [', end='')
+        for d in scsdeets:
+            print(' {:5.2f}, '.format(d),end='')
+        print(']')
+          
+#############################################################
+#
+#   Display the supercluster blobs
+#
+# 
+        img = lcolor_img.image
+ 
+        winname = 'interactive color blobs'
+        erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,  (bpar.esize, bpar.esize))
+        dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (bpar.dsize, bpar.dsize))
+        
+         # get only pixels of selected color with black background
+        
+        color = VQ_color_ctrs[scsdeets[0]]   # BGR color of dominant label in the supercluster
+        
+        print('Looking at color: ', color)
+        
+        
+        clusterBlob = np.where(img == color, img, 0)
+
+        # split image and clusterBlob by channels as next code doesn't work
+        #   with multichannel images
+        channels_img = cv2.split(img)
+        clusterBlobChans = cv2.split(clusterBlob)
+        clusterBlobChannels = []
+        cimg = []
+        for i in range(len(clusterBlobChans)):
+            # remove noise pixels of the same color 
+            
+            x = cv2.erode(clusterBlobChans[i], erode_kernel) 
+            clusterBlobChannels.append(x)
+            
+            # now expand selected blob
+            # note that dilation kernel must compensate erosion so 
+            #   add erosion kernel size to it
+            clusterBlobChannels[i] = cv2.dilate(clusterBlobChannels[i], dilate_kernel)
+            x = cv2.dilate(clusterBlobChannels[i], dilate_kernel)
+            cimg.append(x)
+            
+            # replace fragment on original image with expanded blob
+            mask = cv2.threshold(clusterBlobChannels[i], 0, 255, cv2.THRESH_BINARY_INV)[1]
+            cimg[i] = cv2.bitwise_and(cimg[i], mask)
+            cimg[i] = cv2.bitwise_or(cimg[i], clusterBlobChannels[i])
+
+        # merge processed channels back
+        imgProc = cv2.merge(cimg)
+        clusterBlob = cv2.merge(clusterBlobChannels)
+        cv2.imshow('processed clusterBlob', clusterBlob)
+        cv2.waitKey(3000)
                 
                 
 #############################################################

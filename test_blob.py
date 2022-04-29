@@ -18,6 +18,8 @@ def on_mouse(event, x, y, flag, img):
     if event == cv2.EVENT_LBUTTONUP:
         # get only pixels of selected color with black background
         color = img[y][x]
+        print('Looking at color: ', color)
+
         selection = np.where(img == color, img, 0)
 
         # split image and selection by channels as next code doesn't work
