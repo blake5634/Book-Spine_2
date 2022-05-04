@@ -257,6 +257,7 @@ for pic_filename in img_paths:
 #  identify color blobs centered around supercluster lines
 #
 #
+    blobN = 0
 
     for c in superclusters:        
         x = c['xintercept']
@@ -289,34 +290,60 @@ for pic_filename in img_paths:
         
         clusterBlob = np.where(img == color, img, 0)
 
-        # split image and clusterBlob by channels as next code doesn't work
-        #   with multichannel images
-        channels_img = cv2.split(img)
-        clusterBlobChans = cv2.split(clusterBlob)
-        clusterBlobChannels = []
-        cimg = []
-        for i in range(len(clusterBlobChans)):
-            # remove noise pixels of the same color 
-            
-            x = cv2.erode(clusterBlobChans[i], erode_kernel) 
-            clusterBlobChannels.append(x)
-            
-            # now expand selected blob
-            # note that dilation kernel must compensate erosion so 
-            #   add erosion kernel size to it
-            clusterBlobChannels[i] = cv2.dilate(clusterBlobChannels[i], dilate_kernel)
-            x = cv2.dilate(clusterBlobChannels[i], dilate_kernel)
-            cimg.append(x)
-            
-            # replace fragment on original image with expanded blob
-            mask = cv2.threshold(clusterBlobChannels[i], 0, 255, cv2.THRESH_BINARY_INV)[1]
-            cimg[i] = cv2.bitwise_and(cimg[i], mask)
-            cimg[i] = cv2.bitwise_or(cimg[i], clusterBlobChannels[i])
 
-        # merge processed channels back
-        imgProc = cv2.merge(cimg)
-        clusterBlob = cv2.merge(clusterBlobChannels)
+        ##  Initial approach
+        if False:
+            # split image and clusterBlob by channels as next code doesn't work
+            #   with multichannel images
+            channels_img = cv2.split(img)
+            clusterBlobChans = cv2.split(clusterBlob)
+            clusterBlobChannels = []
+            cimg = []
+            for i in range(len(clusterBlobChans)):
+                # remove noise pixels of the same color 
+                
+                x = cv2.erode(clusterBlobChans[i], erode_kernel) 
+                clusterBlobChannels.append(x)
+                
+                # now expand selected blob
+                # note that dilation kernel must compensate erosion so 
+                #   add erosion kernel size to it
+                clusterBlobChannels[i] = cv2.dilate(clusterBlobChannels[i], dilate_kernel)
+                x = cv2.dilate(clusterBlobChannels[i], dilate_kernel)
+                cimg.append(x)
+                
+                # replace fragment on original image with expanded blob
+                mask = cv2.threshold(clusterBlobChannels[i], 0, 255, cv2.THRESH_BINARY_INV)[1]
+                cimg[i] = cv2.bitwise_and(cimg[i], mask)
+                cimg[i] = cv2.bitwise_or(cimg[i], clusterBlobChannels[i])
+
+            # merge processed channels back
+            imgProc = cv2.merge(cimg)
+            clusterBlob = cv2.merge(clusterBlobChannels)
+            
+        # streamlined approach:  work with the labelimage
+        if True:
+            #_,binary = cv2.threshold(LabelImage.image,100,255,cv2.THRESH_BINARY)
+            label = 12
+            #mask = label_img.image == label
+            #binaryImg = label_img.image.copy()[mask]
+            print('label_img stats:', label_img.ishape(), label_img.image.shape)
+            binaryImg = np.where(label_img.image == label)
+            clusterBlob = np.logical_and(labelColorImg, binaryImg)
+            
+            
         cv2.imshow('processed clusterBlob', clusterBlob)
+        
+        cv2.imwrite('blobSet'+str(blobN)+'.png',clusterBlob)
+        blobN += 1
+        
+        ###
+        #
+        #  find the blobs
+        #
+                # Setup SimpleBlobDetector parameters.
+      
+            
         cv2.waitKey(3000)
                 
                 
