@@ -49,6 +49,10 @@ class bookImage():
     def icopy(self):
         return cp.deepcopy(self,{})
     
+    def blank(self):
+        x = np.ndarray([self.rows, self.cols,3])
+        return x
+    
     def write(self):
         name = input('Enter an image file name: (w/o .png)')
         name += '.png'

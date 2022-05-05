@@ -82,12 +82,25 @@ for pic_filename in img_paths:
     [ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist ] = nf.VQ_pickle(img2.image, N)
     label_img  = bc.bookImage(LabelImage,img2.scale)
     lcolor_img = bc.bookImage(labelColorImg, img2.scale)
-    print('Enter name for label color image (tcolor) e.g.)')
-    #lcolor_img.write()
+    print('Found ',len(VQ_color_ctrs), ' Color Clusters')
+    lcolor_img.write()
     #quit()
         
     # if redo VQ mode(!)
     #quit()  ########################3  temp
+    
+    ###################   write out binary blob images
+    if False:
+        for i in range(len(VQ_color_ctrs)):
+            #  write out a binary image for each VQ color cluster 
+            #2) output binary image label_img==i)
+            print('VQ cluster color:', i, VQ_color_ctrs[i])
+            tcol = VQ_color_ctrs[i]
+            print('VQ cluster color:', i, tcol)
+            levelIblobs = np.where(lcolor_img.image == tcol , lcolor_img.image, 0)
+            name = 'blobSet{:02d}.png'.format(i)
+            cv2.imwrite(name, levelIblobs)
+        quit()
     
     
     ##   Generate an image showing the cluster colors as a palette
