@@ -644,7 +644,7 @@ def VQ_pickle(image, N ):
             print('pickle contained ', len(pick_payload[2]), ' codewords')
             if len(pick_payload[2]) != N:
                 print('Pickle file has wrong image length')
-                quit()
+                #quit()
                 dumpflg = True
     
     if dumpflg:
@@ -656,7 +656,7 @@ def VQ_pickle(image, N ):
                 #
                 #  Use KMeans to posterize to N color labels
                 #
-                img0, tmp, ctrs, color_dist = nf.KM(img2.image, N)   
+                img0, tmp, ctrs, color_dist = KM(image, N)   
                 pick_payload = [img0, tmp, ctrs, color_dist]
                 pickle.dump(pick_payload, pf, protocol=pprotocol)
                 pf.close()

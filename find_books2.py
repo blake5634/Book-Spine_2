@@ -162,7 +162,7 @@ for pic_filename in img_paths:
                         ld = nf.Get_line_params(label_img, theta, x, bpar.book_edge_line_length_mm , y,  bpar.slice_width)  #llen=80, w=10
                         
                         # get the score
-                        lscore = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
+                        lscore, deets = nf.Get_line_score(label_img, bpar.slice_width, ld, color_dist, lcolor_img ) # x=0, th=125deg
                         
                         # if score is low enough store the line and score
                         if lscore < MAX_LINE_SCORE:
@@ -341,11 +341,21 @@ for pic_filename in img_paths:
             #mask = label_img.image == label
             #binaryImg = label_img.image.copy()[mask]
             print('label_img stats:', label_img.ishape(), label_img.image.shape)
-            binaryImg = np.where(label_img.image == label)
-            clusterBlob = np.logical_and(labelColorImg, binaryImg)
-            
-            
+            col = VQ_color_ctrs[label]
+            clusterBlob = np.where(labelColorImg==col, col, bpar.colors['black']).astype("uint8")
+            #clusterBlob = np.logical_and(labelColorImg, binaryImg)
+            print('clusterBlob stats:',  clusterBlob.shape)
+
+         #im = imC.image
+        ##blank = imC.blank()
+        #blank = cv2.imread('tcolor.png')
+        #gimg = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+        #ret, bimg = cv2.threshold(gimg,127,255,cv2.THRESH_BINARY)  
+        #contours, hierarchy = cv2.findContours(bimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) 
+        
+        
         cv2.imshow('processed clusterBlob', clusterBlob)
+        cv2.waitKey(-1)
         
         cv2.imwrite('blobSet'+str(blobN)+'.png',clusterBlob)
         blobN += 1
