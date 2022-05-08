@@ -33,9 +33,12 @@ def getblobs(imC):
                 col = bpar.colors['red']
             else:
                 col = bpar.colors['green']
-                
-            cv2.drawContours(blank, c, -1, col, 3)
-            bookcontours.append(c)
+              
+            rect = cv2.minAreaRect(c)
+            box = cv2.boxPoints(rect)
+            box = np.int0(box)
+            cv2.drawContours(blank, [box], -1, col, 3)
+            bookcontours.append([box])
             ndc += 1
 
         #print('Moments:     ', moms)

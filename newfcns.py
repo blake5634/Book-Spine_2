@@ -126,12 +126,7 @@ def Get_line_score(img, w, ld, cdist, testimage):
     assert img.image.shape[0] == testimage.image.shape[0], 'Image shapes differ (rows)- blackout test INVALID'
     assert img.image.shape[1] == testimage.image.shape[1], 'Image shapes differ (cols)- blackout test INVALID'
 
-    
-    #timg2 = bc.bookImage(testimage, bpar.scale)
-    #timg2.Dline_ld(ld,'yellow')    
-    #cv2.imshow('Can you see it?', timg2.image)
-    #cv2.waitKey(50000)
-    #quit()
+     
         
     #study pixels above and below line at all columns in range   
     vals_abv = []  # values above the line (for all x values)
@@ -169,6 +164,7 @@ def Get_line_score(img, w, ld, cdist, testimage):
         #x = input('ENTER')
         
         TST_MODE = 'color'  
+        blackoutcolor = (150,0,0)
         
         if not ((row > img_height_rows-1 or row < 0) or (col > img_width_cols-1 or col < 0)): # line not outside image?
             ############################
@@ -182,7 +178,7 @@ def Get_line_score(img, w, ld, cdist, testimage):
                     #
                     #
                     if TST_MODE=='color':
-                        testimage.set_px_RC(row1,col, (0,0,0)) # black out tested pixel
+                        testimage.set_px_RC(row1,col, blackoutcolor) # black out tested pixel
                     if TST_MODE=='label':
                         #print('-------------------   GLS: self shape  /  testimg shape / value:' , np.shape(img.image), np.shape(testimage.image), 0)
                         testimage.set_px_RC(row1,col, 0) # black out tested pixel
@@ -196,7 +192,7 @@ def Get_line_score(img, w, ld, cdist, testimage):
                     #
                     #
                     if TST_MODE=='color':
-                        testimage.set_px_RC(row1,col, (0,0,0)) # black out tested pixel
+                        testimage.set_px_RC(row1,col, blackoutcolor) # black out tested pixel
                     if TST_MODE=='label':
                         #print('-------------------   GLS: self shape  /  testimg shape / value:' , np.shape(img.image), np.shape(testimage.image), 0)
                         testimage.set_px_RC(row1,col, 0) # black out tested pixel
