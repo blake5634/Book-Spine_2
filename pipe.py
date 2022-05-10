@@ -31,8 +31,13 @@ def step00():
     if ifpick(nm):
         pl = readpick(nm)
     else:
-        time.sleep(4)
-        writepick(nm, range(50))
+        #
+        #  This is your compute step
+        #
+        time.sleep(2)
+        pl = [x for  x in range(20)]
+        print('Payload: ', pl)
+        writepick(nm, pl)
     
 def step01():
     i = 1
@@ -41,8 +46,12 @@ def step01():
     if ifpick(nm):
         pl = readpick(nm)
     else:
-        time.sleep(4)
-        writepick(nm, range(50))
+        #
+        #  This is your compute step
+        #
+        time.sleep(2)
+        pl = [x for  x in range(20)]
+        writepick(nm, pl)
     
 def step02():
     i = 2
@@ -51,8 +60,11 @@ def step02():
     if ifpick(nm):
         pl = readpick(nm)
     else:
-        time.sleep(4)
-        pl = range(50)
+        #
+        #  This is your compute step
+        #
+        time.sleep(2)
+        pl = [x for  x in range(20)]
         writepick(nm, pl)
         
         
@@ -84,11 +96,13 @@ def readpick(name):
     
 def writepick(name, pick_payload):
     pfname = pickle_dir + name + '_pickle.p'
-    with open(pfname,'wb') as pf:   
-        pprotocol = 2
-        pickle.dump(pick_payload, pf, protocol=pprotocol)
-        pf.close()
-    print('couldnt write pickle file')
+    try:
+        with open(pfname,'wb') as pf:   
+            pprotocol = 2
+            pickle.dump(pick_payload, pf, protocol=pprotocol)
+            pf.close()
+    except:
+        print('couldnt write pickle file')
         
 if __name__=='__main__':
     step00()
