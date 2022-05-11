@@ -30,7 +30,7 @@ def step00():
     i = 0
     print('Starting Step ', i)
     nm = 'step{:02d}'.format(i)
-    if ifpick(nm):
+    if pick_exists(nm):
         pl = readpick(nm)
     else:
         #############################################################
@@ -38,7 +38,7 @@ def step00():
         #  read and pre-process image
         #
         #
-
+        # can use '*' to find a bunch of files
         img_paths = gb.glob('tiny/target.jpg')       # actual
         d2r = 2*np.pi/360.0  #deg to rad
 
@@ -47,13 +47,10 @@ def step00():
             quit()
         for pic_filename in img_paths:
             print('looking at '+pic_filename)
-            #img_gray, img = pre_process(pic_filename)
-            #cv2.IMREAD_GRAYSCALE
             
             #
             #  read in the image
             #
-            #img = cv2.imread(pic_filename, cv2.IMREAD_COLOR)
             img_orig = bc.bookImage(cv2.imread(pic_filename, cv2.IMREAD_COLOR), 0.2) 
             #line_disp_image = img_orig.icopy()  # copy of original for visualization 
 
@@ -89,37 +86,27 @@ def step00():
 
             #############################################################
             #
-            #  VQ the colors and pickle them
+            #  VQ the colors 
             #
             # 
-                
-            #
-            #  Check for stored KMeans Result and compute if not available
-            #
-            #
             print('Starting colors VQ')
             N = bpar.KM_Clusters  # how many VQ clusters to generate
             
             [ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist ] = nf.KM(img2.image, N)
+            
             label_img  = bc.bookImage(LabelImage,img2.scale)
             lcolor_img = bc.bookImage(labelColorImg, img2.scale)
             print('Found ',len(VQ_color_ctrs), ' Color Clusters')
-            #lcolor_img.write()
-            
-        
                     
             ###################   write out binary blob images
+            #  TODO: generalize this to multiple images under analysis
             if not os.path.isfile('blobSet00.png'):  # unless they exist
                     for i in range(len(VQ_color_ctrs)):
                         #  write out a binary image for each VQ color cluster 
-                        #2) output binary image label_img==i)
-                        print('VQ cluster color:', i, VQ_color_ctrs[i])
                         tcol = VQ_color_ctrs[i]
-                        print('VQ cluster color:', i, tcol)
                         levelIblobs = np.where(lcolor_img.image == tcol , lcolor_img.image, 0)
                         name = 'blobSet{:02d}.png'.format(i)
                         cv2.imwrite(name, levelIblobs) 
-            
             
             ##   Generate an image showing the cluster colors as a palette
             if False:
@@ -130,7 +117,7 @@ def step00():
 
             ############
             #
-            #  generate the pickle payload for this step
+            #  save the pickle payload for this step
             # 
             pick_payload = [ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist , label_img, lcolor_img] 
             print(nm+' saving pickle...')
@@ -147,11 +134,12 @@ def step01():
     #[ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist , label_img, lcolor_img] 
     
     nm = 'step{:02d}'.format(i)  # do we need to compute this step???
-    if ifpick(nm):
+    if pick_exists(nm):
         pl = readpick(nm)
     else:
         #############################################################
         #
+        #      Visualize the found contours
         #
         #time.sleep(2)
         #pl = [x for x in range(0,20)]
@@ -196,7 +184,7 @@ def step02():
     i = 2
     print('Starting Step ', i)
     nm = 'step{:02d}'.format(i)
-    if ifpick(nm):
+    if pick_exists(nm):
         pl = readpick(nm)
     else:
         #
@@ -214,7 +202,7 @@ def step02():
 #
 #   Generic pickle functions
 #
-def ifpick(name):
+def pick_exists(name):
     #
     #  check for file
     #
