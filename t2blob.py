@@ -6,7 +6,7 @@ import sys
 import book_parms as bpar
 import book_classes as bc
 
-def getblobs(imC):
+def getBookBlobs(imC):
     im = imC.image
     #blank = imC.blank()
     blank = cv2.imread('tcolor.png')
@@ -16,7 +16,10 @@ def getblobs(imC):
     print('Found {:} contours'.format(len(contours)))
     im2 = im.copy()
     
+    origcontours = []
     bookcontours = []
+    othercontours = []
+    
 
     ndc = 0
     for i in range(len(contours)):
@@ -34,17 +37,21 @@ def getblobs(imC):
             else:
                 col = bpar.colors['green']
               
+            origcontours.append(c)
             rect = cv2.minAreaRect(c)
             box = cv2.boxPoints(rect)
             box = np.int0(box)
-            cv2.drawContours(blank, [box], -1, col, 3)
+            #cv2.drawContours(blank, [box], -1, col, 3)
             bookcontours.append([box])
             ndc += 1
+        else:
+            if area > 100:
+                othercontours.append(c)
 
-        #print('Moments:     ', moms)
-        print('Area:        {:8.1f}'.format(  area))
-        print('Perimeter    {:8.1f}'.format( perim))
-        print('Elongation   {:8.3f}'.format( elong))
+        ##print('Moments:     ', moms)
+        #print('Area:        {:8.1f}'.format(  area))
+        #print('Perimeter    {:8.1f}'.format( perim))
+        #print('Elongation   {:8.3f}'.format( elong))
         
     #if ndc > 0:
         #title = 'contours, hulls'
@@ -53,7 +60,7 @@ def getblobs(imC):
     #else:
         #print('\n\n              No Contours Match \n\n')
 
-    return bookcontours
+    return bookcontours, origcontours, othercontours
     
     
 ###
