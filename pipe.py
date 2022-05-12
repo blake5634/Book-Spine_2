@@ -22,6 +22,14 @@ import pickle     # for storing data btwn steps
 #import glob as gb
 import matplotlib.pyplot as plt
 
+def pimtype(img):
+    if type(img) != type( np.ndarray([5,5])):
+        print('Image type: ', type(img))
+        print(img.ishape())
+    else:        
+        print('Image type: ', type(img))
+        print(img.shape)
+    return
 
 # where the pickles will live
 pickle_dir = 'VQ_pickle/'
@@ -98,8 +106,14 @@ def step00():
             lcolor_img = bc.bookImage(labelColorImg, img2.scale)
             print('Found ',len(VQ_color_ctrs), ' Color Clusters')
                     
-            ###################   write out binary blob images
+                
+            ################### 
+            #
+            #   write out binary blob images
+            
             #  TODO: generalize this to multiple images under analysis
+            
+            
             if not os.path.isfile('blobSet00.png'):  # unless they exist
                     for i in range(len(VQ_color_ctrs)):
                         #  write out a binary image for each VQ color cluster 
@@ -141,18 +155,41 @@ def step01():
         #
         #      Visualize the found contours
         #
-        #time.sleep(2)
-        #pl = [x for x in range(0,20)]
+        
+        # set up morph kernels
+        erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,  (bpar.esize, bpar.esize))
+        dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (bpar.dsize, bpar.dsize))
+        
         bookcs = []
         rejectcs = []
         rawcs = []
         for i in range(20):
             fname = 'blobSet{:02d}.png'.format(int(i))
             print('Opening: ', fname)
+            
             im1 = cv2.imread(fname) 
             im1Image = bc.bookImage(im1,bpar.scale)
             
-            bcont, rawcontours, rejects =  t2.getBookBlobs(im1Image)
+            #  1) convert to gray
+            
+            timg = bc.bookImage(im1Image.gray(), im1Image.scale)
+            
+            #  2) threshold
+            
+            bimg = timg.thresh(128)
+             
+            #  3) smooth with dilate and erode_kernel
+            b2 = cv2.erode(bimg, erode_kernel)
+            b3 = cv2.dilate(b2, dilate_kernel)
+            
+            #  4) mask the original image (im1Image)
+            i2 = bc.bookImage(im1Image.maskBin(b3), im1Image.scale)
+            
+            pimtype(i2)
+            #  5) get contours
+            bcont, rawcontours, rejects =  t2.getBookBlobs(i2)
+            
+            
             for b in bcont:
                 bookcs.append(b)
             for r in rejects:

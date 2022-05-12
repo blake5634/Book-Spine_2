@@ -32,9 +32,33 @@ class bookImage():
         self.height_mm = self.rows*self.scale
         self.ctXmm = self.width_mm/2.0    # mm offset to center of image H
         self.ctYmm = self.height_mm/2.0  # mm offset to center of image V
-        
-        # validate image type here
-        
+         
+    def thresh(self, t):
+        x,img = cv2.threshold(self.image, t, 255, cv2.THRESH_BINARY)
+        return img
+    
+    def gray(self):
+        return cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+    
+    def maskBin(self,mask):
+        if len(mask.shape) > 2:
+            print('illegal image type for maskBin()')
+            quit()
+        else:
+            if self.image.shape[:-1] != mask.shape:
+                print('image and mask shapes differ:')
+                print(self.image.shape, mask.shape)
+                quit()
+            #return cv2.bitwise_and(self.image, mask) 
+            #return self.image[mask]
+            result = self.image.copy()
+            for r in range(self.rows):
+                for c in range(self.cols):
+                    if mask[r,c] == 0:
+                        result[r,c] = 0
+            return  result
+
+    
     def isequal(self,x):
         if self.type != 'mono':
             print('illegal image type for isequal()')
