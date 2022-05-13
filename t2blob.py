@@ -29,7 +29,7 @@ def getBookBlobs(imC):
         perim = cv2.arcLength(c, True)
         area  = cv2.contourArea(c)
         elong = perim / np.sqrt(area)
-        hull  = cv2.convexHull(c)
+        #hull  = cv2.convexHull(c)
         #if elong > 7 and elong < 12 and  area > 5000:
         if area > 3000 and elong > 5 and elong < 15:
             if   area > 4000:

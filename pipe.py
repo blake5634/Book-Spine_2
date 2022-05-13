@@ -34,7 +34,7 @@ def pimtype(img):
 # where the pickles will live
 pickle_dir = 'VQ_pickle/'
 
-def step00():
+def step00(imagefilename):
     i = 0
     print('Starting Step ', i)
     nm = 'step{:02d}'.format(i)
@@ -47,7 +47,7 @@ def step00():
         #
         #
         # can use '*' to find a bunch of files
-        img_paths = gb.glob('tiny/target.jpg')       # actual
+        img_paths = gb.glob(imagefilename)       # actual
         d2r = 2*np.pi/360.0  #deg to rad
 
         if (len(img_paths) < 1):
@@ -76,7 +76,8 @@ def step00():
                 
             sh = img_orig_sm.ishape()
             print('Scaled:    {:} rows, {:} cols.'.format(sh[0],sh[1]))        
-                
+            cv2.imwrite('tcolor.png', img_orig_sm.image)
+            
             ############
             #
             #   blur  
@@ -138,7 +139,7 @@ def step00():
             writepick(nm, pick_payload)
                     
     
-def step01():
+def step01(imagefilename):
     i = 1
     print('Starting Step ', i)
     nm1 ='step{:02d}'.format(i-1)  # result of previous step
@@ -160,6 +161,7 @@ def step01():
         erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,  (bpar.esize, bpar.esize))
         dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (bpar.dsize, bpar.dsize))
         
+        ncontours = 0
         bookcs = []
         rejectcs = []
         rawcs = []
@@ -197,18 +199,21 @@ def step01():
             for oc in rawcontours:
                 rawcs.append(oc)
                 
-        print ('\n\n  Found {:} book contours \n'.format(len(bookcs)))
-        print ('\n\n  Found {:} orig contours \n'.format(len(bookcs)))
-        print ('  Found {:} reject contours (A>20)\n\n'.format(len(rawcs)))
+        print ('\n\n  Found {:} raw contours \n'.format(len(rawcs)))
+        print ('\n\n  Found {:} rect contours \n'.format(len(bookcs)))
+        print ('  Found {:} reject contours (A>20)\n\n'.format(len(rejectcs)))
         
         col = bpar.colors['red']
-        blank = cv2.imread('tcolor.png')
+        blank = cv2.imread('tcolor.png')  # copy of the scaled image for display
         blank2 = blank.copy()
         #for b in bookcs:
-        for b in rawcs:
+        for b in rawcs:   # rough books
+            cv2.drawContours(blank, b, -1, col, 3)
+        for b in bookcs:  # rectangles
+            col = bpar.colors['blue']
             cv2.drawContours(blank, b, -1, col, 3)
 
-        cv2.imshow('title',blank)
+        cv2.imshow(filename,blank)
         
         for r in rejectcs:
             cv2.drawContours(blank2, r, -1, bpar.colors['green'], thickness=cv2.FILLED)
@@ -271,13 +276,40 @@ def writepick(name, pick_payload):
         print('couldnt write pickle file')
         
         
+def clearpicks(Ns):
+    dir = 'VQ_pickle/'
+    clearblobs = False
+    for n in Ns:
+        if n==-1:
+            clearblobs = True
+        else:
+            name = dir + 'step{:02d}_pickle.p'.format(n)
+            if os.path.isfile(name):
+                os.remove(name)
+    if clearblobs:
+        for f in gb.glob('blobSet*.png'):
+            print('Trying to remove:',f)
+            os.remove(f)
+
         
         
 if __name__=='__main__':
+    a = sys.argv
+    clears = []
+    for i,ar in enumerate(a):
+        if i >0:
+            clears.append(int(ar))
+    print ('Clearing: ', clears)
+    if len(clears)>0:
+        clearpicks(clears)
 # read in image and perform VQ
-    step00()
+    #step00('tiny/target.jpg')
+    
+    filename = 'tiny/newtest01.jpg'
+    filename = 'tiny/newtest02.jpg'
+    step00(filename)
 # trace contours, ID rectangles, and display
-    step01()
+    step01(filename)
     #step02()
     
     

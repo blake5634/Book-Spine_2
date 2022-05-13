@@ -9,6 +9,13 @@ pix2mm = 0.2 * float(scale)   # convert pix * pix2mm = xx mm
                                     # measure off unscaled target image
 mm2pix = float(1.0)/pix2mm 
 
+
+
+################################################
+#
+#    Image input stage and color VQ params
+#
+
 #  following smoothing windows are scaled from here by /scale
 #     values below reflect a nominal image width of 1670
 
@@ -16,14 +23,12 @@ deriv_win_size =     int(1.0*mm2pix)      # 1mm width
 smooth_size    = -1* int(10*mm2pix)    # <0:   do not smooth
 blur_rad_mm       =     int(7.0)    # image must determine # pixels
 
-KM_Clusters = 20  # number of K-means clusters for color
+KM_Clusters = 30  # number of K-means clusters for color
+ 
 
+######################################################
 #
-#   slant.py
-#
-
-#
-#    LINE SCORE THRESHOLD
+#    LINE SCORE PARAMS
 #
 Line_Score_Thresh = 0.300 # score units (lower is better) 
 
@@ -54,21 +59,22 @@ line_VQ_Nclusters = 7
 #
 #  clusterneighborhood search
 
-KMneighborDX =  10  #mm
-KMneighborDth = 15 # deg
+KMneighborDX =  5 #mm
+KMneighborDth = 12 # deg
 
 
-###############
+##################################################
 #
 #  Cluster cleanup and bookfinding
 #
 
-esize = 5  # erode px
-dsize = 12  # dilate px
+esize = 3 # erode px
+dsize = 25  # dilate px
 
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-colors = {'black':(0,0,0), 'white':(255,255,255), 'blue':(255,0,0), 'green':(0,255,0), 'red':(0,0,255),'yellow':(0,255,255)}
+colors = {'black':(0,0,0), 'white':(255,255,255), 'blue':(255,0,0), 'green':(0,255,0), 'red':(0,0,255),'yellow':(0,255,255),
+          'acqua':(255,255,0),'fuchsia':(255,0,255),'maroon':(0,0,128),'navy':(128,0,0),'olive':(0,128,128)}
 '''
     Black: (0, 0, 0)
     White: (255, 255, 255)
