@@ -58,7 +58,23 @@ class bookImage():
                         result[r,c] = 0
             return  result
 
-    
+    def histoEq(self, mode): 
+        if mode == 'value':
+            channel = 2
+        elif mode == 'saturation':
+            channel = 1
+        elif mode == 'hue':
+            channel = 0
+        else:
+            print('illegal mode for histgram equalization: ', mode)
+            quit()
+        # convert image from RGB to HSV
+        img_hsv = cv2.cvtColor(self.image, cv2.COLOR_RGB2HSV)
+        # Histogram equalisation on the V-channel
+        img_hsv[:, :, 2] = cv2.equalizeHist(img_hsv[:, :, channel])
+        # convert image back from HSV to BGR
+        return cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
+        
     def isequal(self,x):
         if self.type != 'mono':
             print('illegal image type for isequal()')
@@ -144,7 +160,7 @@ class bookImage():
          
         return tmp 
 
-    def blur_mm_rad(radius):
+    def blur_mm_rad(self, radius):
         b = int(radius/self.scale)
         if b%2 == 0:  # radius must be odd # 
             b+=1            

@@ -21,9 +21,11 @@ mm2pix = float(1.0)/pix2mm
 
 deriv_win_size =     int(1.0*mm2pix)      # 1mm width
 smooth_size    = -1* int(10*mm2pix)    # <0:   do not smooth
-blur_rad_mm       =     int(7.0)    # image must determine # pixels
 
-KM_Clusters = 30  # number of K-means clusters for color
+blur_flag = False
+blur_rad_mm       =     int(4.0)    # image must determine # pixels
+
+KM_Clusters = 20  # number of K-means clusters for color
  
 
 ######################################################
@@ -68,8 +70,22 @@ KMneighborDth = 12 # deg
 #  Cluster cleanup and bookfinding
 #
 
-esize = 3 # erode px
-dsize = 25  # dilate px
+esize = 8   # erode px
+dsize = 10  # dilate px
+
+
+###################################################
+#
+#    Cluster/Blob selection parameters
+#
+
+area_min = 2000
+elong_min = 4
+elong_max =  100
+noise_area_threshold = 100
+
+
+
 
 
 font = cv2.FONT_HERSHEY_SIMPLEX

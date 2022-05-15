@@ -75,30 +75,41 @@ def step00(imagefilename):
             img_orig_sm = img_orig.downvert(2)     # scale down rows and cols by 2
                 
             sh = img_orig_sm.ishape()
-            print('Scaled:    {:} rows, {:} cols.'.format(sh[0],sh[1]))        
-            cv2.imwrite('tcolor.png', img_orig_sm.image)
+            print('Scaled:    {:} rows, {:} cols.'.format(sh[0],sh[1]))   
             
+            ############
+            #
+            #   histogram equalization  
+            #
+            
+            #print('Starting Histogram equalization.')
+            #img_orig_sm.image = img_orig_sm.histoEq('value')
+            
+            
+                 
             ############
             #
             #   blur  
             #
             
-            blur = False
+            blur = bpar.blur_flag
             
             if blur:
                 print('Starting image blur.')
-                img_orig_sm.blur_rad_mm(bpar.blur_rad_mm) 
+                img_orig_sm.blur_mm_rad(bpar.blur_rad_mm) 
             
             img2 = img_orig.icopy()  # no blur 
             img2 = img_orig_sm.icopy()  # no blur 
             
 
+            cv2.imwrite('tcolor.png', img_orig_sm.image)
+            
             #############################################################
             #
             #  VQ the colors 
             #
             # 
-            print('Starting colors VQ')
+            print('Starting colors VQ with ', bpar.KM_Clusters,' clusters.')
             N = bpar.KM_Clusters  # how many VQ clusters to generate
             
             [ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist ] = nf.KM(img2.image, N)
@@ -118,8 +129,12 @@ def step00(imagefilename):
             if not os.path.isfile('blobSet00.png'):  # unless they exist
                     for i in range(len(VQ_color_ctrs)):
                         #  write out a binary image for each VQ color cluster 
+                        tmpimg = lcolor_img.icopy()
                         tcol = VQ_color_ctrs[i]
-                        levelIblobs = np.where(lcolor_img.image == tcol , lcolor_img.image, 0)
+                        levelIblobs = np.where(lcolor_img.image == tcol , tmpimg.image, 0)
+                                   #  2) threshold
+                        tim1 = bc.bookImage(levelIblobs, lcolor_img.scale)
+                        levelIblobs = tim1.thresh(2)
                         name = 'blobSet{:02d}.png'.format(i)
                         cv2.imwrite(name, levelIblobs) 
             
@@ -165,7 +180,7 @@ def step01(imagefilename):
         bookcs = []
         rejectcs = []
         rawcs = []
-        for i in range(20):
+        for i in range(bpar.KM_Clusters):
             fname = 'blobSet{:02d}.png'.format(int(i))
             print('Opening: ', fname)
             
@@ -175,10 +190,8 @@ def step01(imagefilename):
             #  1) convert to gray
             
             timg = bc.bookImage(im1Image.gray(), im1Image.scale)
-            
-            #  2) threshold
-            
-            bimg = timg.thresh(128)
+            bimg = timg.image
+ 
              
             #  3) smooth with dilate and erode_kernel
             b2 = cv2.erode(bimg, erode_kernel)
@@ -189,16 +202,17 @@ def step01(imagefilename):
             
             pimtype(i2)
             #  5) get contours
-            bcont, rawcontours, rejects =  t2.getBookBlobs(i2)
+            book_contours, rawcontours, rejects =  t2.getBookBlobs(i2)
             
             
-            for b in bcont:
+            for b in book_contours:
                 bookcs.append(b)
             for r in rejects:
                 rejectcs.append(r)
             for oc in rawcontours:
                 rawcs.append(oc)
                 
+        
         print ('\n\n  Found {:} raw contours \n'.format(len(rawcs)))
         print ('\n\n  Found {:} rect contours \n'.format(len(bookcs)))
         print ('  Found {:} reject contours (A>20)\n\n'.format(len(rejectcs)))
@@ -279,7 +293,7 @@ def writepick(name, pick_payload):
 def clearpicks(Ns):
     dir = 'VQ_pickle/'
     clearblobs = False
-    for n in Ns:
+    for n in Ns:    # clear the specified pickle files
         if n==-1:
             clearblobs = True
         else:
@@ -288,7 +302,7 @@ def clearpicks(Ns):
                 os.remove(name)
     if clearblobs:
         for f in gb.glob('blobSet*.png'):
-            print('Trying to remove:',f)
+            print('Removing:',f)
             os.remove(f)
 
         
@@ -303,10 +317,12 @@ if __name__=='__main__':
     if len(clears)>0:
         clearpicks(clears)
 # read in image and perform VQ
-    #step00('tiny/target.jpg')
+    filename = 'tiny/target.jpg'     # orig devel image    
+    #filename = 'tiny/newtest01.jpg'
+    #filename = 'tiny/newtest02.jpg'
+    #filename = 'tiny/newtest03.jpg'
     
-    filename = 'tiny/newtest01.jpg'
-    filename = 'tiny/newtest02.jpg'
+    
     step00(filename)
 # trace contours, ID rectangles, and display
     step01(filename)
