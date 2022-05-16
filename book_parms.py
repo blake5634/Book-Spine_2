@@ -10,7 +10,8 @@ pix2mm = 0.2 * float(scale)   # convert pix * pix2mm = xx mm
 mm2pix = float(1.0)/pix2mm 
 
 
-
+image_dir = 'tiny/'
+tmp_img_path = 'tmp_images/'
 ################################################
 #
 #    Image input stage and color VQ params
@@ -84,6 +85,8 @@ elong_min = 4
 elong_max =  100
 noise_area_threshold = 100
 
+corner_dist_max_px = 10
+enough_corners = 2
 
 
 

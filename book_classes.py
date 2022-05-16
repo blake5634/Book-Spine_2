@@ -33,6 +33,13 @@ class bookImage():
         self.ctXmm = self.width_mm/2.0    # mm offset to center of image H
         self.ctYmm = self.height_mm/2.0  # mm offset to center of image V
          
+    def __repr__(self):
+        resultStr  = '\nbookImage instance:\n'
+        resultStr += '   shape:    ' + str(self.ishape()) + '\n'
+        resultStr += '   scale:    ' + str(self.scale) + 'mm/px' + '\n'
+        resultStr += '   type:     ' + str(type(self.image)) + '\n'
+        return resultStr
+        
     def thresh(self, t):
         x,img = cv2.threshold(self.image, t, 255, cv2.THRESH_BINARY)
         return img
@@ -42,12 +49,15 @@ class bookImage():
     
     def maskBin(self,mask):
         if len(mask.shape) > 2:
-            print('illegal image type for maskBin()')
+            print('illegal image type for maskBin(): ',mask.shape)
+            quit()
+        if len(self.image.shape)<3:
+            print('incorrect image type for maskBin')
             quit()
         else:
             if self.image.shape[:-1] != mask.shape:
-                print('image and mask shapes differ:')
-                print(self.image.shape, mask.shape)
+                print('image and mask row/col shapes differ:')
+                print(self.image.shape[:-1], mask.shape)
                 quit()
             #return cv2.bitwise_and(self.image, mask) 
             #return self.image[mask]

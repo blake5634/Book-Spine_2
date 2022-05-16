@@ -34,7 +34,7 @@ def pimtype(img):
 # where the pickles will live
 pickle_dir = 'VQ_pickle/'
 
-def step00(imagefilename):
+def step00(imagedir, imagefilename):
     i = 0
     print('Starting Step ', i)
     nm = 'step{:02d}'.format(i)
@@ -47,14 +47,14 @@ def step00(imagefilename):
         #
         #
         # can use '*' to find a bunch of files
-        img_paths = gb.glob(imagefilename)       # actual
+        img_paths = gb.glob(imagedir+imagefilename)       # actual
         d2r = 2*np.pi/360.0  #deg to rad
 
         if (len(img_paths) < 1):
             print('No files found')
             quit()
         for pic_filename in img_paths:
-            print('looking at '+pic_filename)
+            print('looking at '+imagedir+imagefilename)
             
             #
             #  read in the image
@@ -122,23 +122,32 @@ def step00(imagefilename):
             ################### 
             #
             #   write out binary blob images
+            #
+            #    (Note: saving as png has default compression that deletes some blobs 
+            #        and in general changes the blob results)
+            #
             
-            #  TODO: generalize this to multiple images under analysis
+            #  TODO: generalize this to multiple images under analysis            
             
+            fn_root = pic_filename.split('.')[0].split('/')[-1]
+            nameTemplate = 'blobSet{:02d}_{:}.png'
             
-            if not os.path.isfile('blobSet00.png'):  # unless they exist
-                    for i in range(len(VQ_color_ctrs)):
-                        #  write out a binary image for each VQ color cluster 
-                        tmpimg = lcolor_img.icopy()
-                        tcol = VQ_color_ctrs[i]
-                        levelIblobs = np.where(lcolor_img.image == tcol , tmpimg.image, 0)
-                                   #  2) threshold
-                        tim1 = bc.bookImage(levelIblobs, lcolor_img.scale)
-                        levelIblobs = tim1.thresh(2)
-                        name = 'blobSet{:02d}.png'.format(i)
-                        cv2.imwrite(name, levelIblobs) 
-            
-            ##   Generate an image showing the cluster colors as a palette
+            if not os.path.isfile(bpar.tmp_img_path + nameTemplate.format(00, fn_root)):  # unless they exist
+                for i in range(len(VQ_color_ctrs)):
+                    #  write out a binary image for each VQ color cluster 
+                    tmpimg = lcolor_img.icopy()
+                    tcol = VQ_color_ctrs[i]
+                    levelIblobs = np.where(lcolor_img.image == tcol , tmpimg.image, 0)
+                                #  2) threshold
+                    tim1 = bc.bookImage(levelIblobs, lcolor_img.scale)
+                    # thresholding step moved here.
+                    tim1.image = tim1.gray()
+                    levelIblobs = tim1.thresh(2) 
+                    name = bpar.tmp_img_path + nameTemplate.format(i,fn_root)
+                    print('Writing: ', name, levelIblobs.shape)
+                    cv2.imwrite(name, levelIblobs) 
+        
+            ##   Generate an image to show the cluster colors as a palette
             if False:
                 imct = nf.Gen_cluster_colors(VQ_color_ctrs)
                 cv2.imshow("cluster colors ",imct)
@@ -154,7 +163,7 @@ def step00(imagefilename):
             writepick(nm, pick_payload)
                     
     
-def step01(imagefilename):
+def step01(imagedir, imagefilename):
     i = 1
     print('Starting Step ', i)
     nm1 ='step{:02d}'.format(i-1)  # result of previous step
@@ -172,6 +181,9 @@ def step01(imagefilename):
         #      Visualize the found contours
         #
         
+        fn_root = imagefilename.split('.')[0]
+        nameTemplate = 'blobSet{:02d}_{:}.png'
+            
         # set up morph kernels
         erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,  (bpar.esize, bpar.esize))
         dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (bpar.dsize, bpar.dsize))
@@ -181,23 +193,33 @@ def step01(imagefilename):
         rejectcs = []
         rawcs = []
         for i in range(bpar.KM_Clusters):
-            fname = 'blobSet{:02d}.png'.format(int(i))
+            fname = bpar.tmp_img_path + nameTemplate.format(i, fn_root)
             print('Opening: ', fname)
             
+            # read the binary image segemented by color image
             im1 = cv2.imread(fname) 
             im1Image = bc.bookImage(im1,bpar.scale)
+        
             
-            #  1) convert to gray
+            ##  1) convert to gray  ##  update: stored imgs changed to binary
             
-            timg = bc.bookImage(im1Image.gray(), im1Image.scale)
-            bimg = timg.image
+            #timg = bc.bookImage(im1Image.gray(), im1Image.scale)
+            #bimg = timg.image
  
              
             #  3) smooth with dilate and erode_kernel
+            
+            bimg = im1Image.image
             b2 = cv2.erode(bimg, erode_kernel)
             b3 = cv2.dilate(b2, dilate_kernel)
             
             #  4) mask the original image (im1Image)
+            
+            print('***************************8 testing')
+            print(im1Image.ishape())
+                
+            print(im1Image)
+            
             i2 = bc.bookImage(im1Image.maskBin(b3), im1Image.scale)
             
             pimtype(i2)
@@ -236,7 +258,7 @@ def step01(imagefilename):
         cv2.waitKey(-1)
  
     
-def step02():
+def step02(imagedir, imagefilename):
     i = 2
     print('Starting Step ', i)
     nm = 'step{:02d}'.format(i)
@@ -301,7 +323,7 @@ def clearpicks(Ns):
             if os.path.isfile(name):
                 os.remove(name)
     if clearblobs:
-        for f in gb.glob('blobSet*.png'):
+        for f in gb.glob(bpar.tmp_img_path + 'blobSet*.png'):
             print('Removing:',f)
             os.remove(f)
 
@@ -317,15 +339,16 @@ if __name__=='__main__':
     if len(clears)>0:
         clearpicks(clears)
 # read in image and perform VQ
-    filename = 'tiny/target.jpg'     # orig devel image    
-    #filename = 'tiny/newtest01.jpg'
-    #filename = 'tiny/newtest02.jpg'
-    #filename = 'tiny/newtest03.jpg'
+
+    filename = 'target.jpg'     # orig devel image    
+    #filename = 'newtest01.jpg'
+    #filename = 'newtest02.jpg'
+    #filename = 'newtest03.jpg'
+    imagedir = bpar.image_dir
     
-    
-    step00(filename)
+    step00(imagedir,filename)
 # trace contours, ID rectangles, and display
-    step01(filename)
+    step01(imagedir,filename)
     #step02()
     
     

@@ -36,6 +36,7 @@ def getBookBlobs(imC):
         box = cv2.boxPoints(rect)
         box = np.int0(box)
         elong = box_elong(box)
+        boxiness = boxy(c,box)
         #hull  = cv2.convexHull(c)
         #if elong > 7 and elong < 12 and  area > 5000:
         if area > bpar.area_min  and elong > bpar.elong_min  and elong < bpar.elong_max:
@@ -48,10 +49,19 @@ def getBookBlobs(imC):
             #cv2.drawContours(blank, [box], -1, col, 3)
             bookcontours.append([box])
             ndc += 1
+        elif boxiness >= bpar.enough_corners:
+            origcontours.append([c])
+            bookcontours.append([box])
+            ndc += 1
+            
         else:
             if area > bpar.noise_area_threshold:
                 othercontours.append(c)
 
+        #
+        #   find "boxy" blobs that are smaller than area_min
+        #
+        
         ##print('Moments:     ', moms)
         #print('Area:        {:8.1f}'.format(  area))
         #print('Perimeter    {:8.1f}'.format( perim))
@@ -106,8 +116,31 @@ if __name__== '__main__':
     cv2.imshow('title',blank)
     cv2.waitKey(-1)
 
-
+##############
+#
+#  does the contour resemble part of a rectangle??
+#   (e.g. a couple of corners close to bounding rectangle)
+#
 def boxy(blob, box):
+    dmins = np.zeros[4]
+    for i,d in enumerate( dmins ):
+        dmins[i] = 999999999
+        
+    for i, corner in enumerate(box):
+        for p in blob:
+            di = pdist(p,corner)
+            if di < dmins[i]:
+                dmins[i] = di
+    th = bpar.corner_dist_max_px
+    nclose = 0
+    for i in range(4):
+        if dmins[i] < th:
+            nclose += 1
+    return nclose
+
+            
+
+def boxy0(blob, box):
     rmin_box = 999999999
     rmax_box = 0
     cmin_box = rmin_box
