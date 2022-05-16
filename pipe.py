@@ -190,6 +190,7 @@ def step01(imagedir, imagefilename):
         
         ncontours = 0
         bookcs = []
+        boxycs = []
         rejectcs = []
         rawcs = []
         for i in range(bpar.KM_Clusters):
@@ -199,6 +200,9 @@ def step01(imagedir, imagefilename):
             # read the binary image segemented by color image
             im1 = cv2.imread(fname) 
             im1Image = bc.bookImage(im1,bpar.scale)
+            
+            #  we need a gray scale image 
+            im1Image.image = im1Image.gray()
         
             
             ##  1) convert to gray  ##  update: stored imgs changed to binary
@@ -216,19 +220,23 @@ def step01(imagedir, imagefilename):
             #  4) mask the original image (im1Image)
             
             print('***************************8 testing')
+            
             print(im1Image.ishape())
                 
             print(im1Image)
+            
             
             i2 = bc.bookImage(im1Image.maskBin(b3), im1Image.scale)
             
             pimtype(i2)
             #  5) get contours
-            book_contours, rawcontours, rejects =  t2.getBookBlobs(i2)
+            book_contours, boxy_contours, rawcontours, rejects =  t2.getBookBlobs(i2)
             
             
             for b in book_contours:
                 bookcs.append(b)
+            for b in boxy_contours:
+                boxycs.append(b)
             for r in rejects:
                 rejectcs.append(r)
             for oc in rawcontours:
@@ -245,6 +253,10 @@ def step01(imagedir, imagefilename):
         #for b in bookcs:
         for b in rawcs:   # rough books
             cv2.drawContours(blank, b, -1, col, 3)
+            
+        for b in boxycs:
+            cv2.drawContours(blank, b, -1, bpar.colors['green'],2)
+            
         for b in bookcs:  # rectangles
             col = bpar.colors['blue']
             cv2.drawContours(blank, b, -1, col, 3)
@@ -341,9 +353,10 @@ if __name__=='__main__':
 # read in image and perform VQ
 
     filename = 'target.jpg'     # orig devel image    
-    #filename = 'newtest01.jpg'
+    filename = 'newtest01.jpg'
     #filename = 'newtest02.jpg'
-    #filename = 'newtest03.jpg'
+    filename = 'newtest03.jpg'
+    
     imagedir = bpar.image_dir
     
     step00(imagedir,filename)

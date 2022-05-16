@@ -10,8 +10,8 @@ def getBookBlobs(imC):
     im = imC.image
     #blank = imC.blank()
     blank = cv2.imread('tcolor.png')
-    gimg = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-    ret, bimg = cv2.threshold(gimg,127,255,cv2.THRESH_BINARY)  
+    #gimg = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    ret, bimg = cv2.threshold(im,127,255,cv2.THRESH_BINARY)  
     #contours, hierarchy = cv2.findContours(bimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contours, hierarchy = cv2.findContours(bimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     print('Found {:} contours'.format(len(contours)))
@@ -19,6 +19,7 @@ def getBookBlobs(imC):
     
     origcontours = []
     bookcontours = []
+    boxycontours = []
     othercontours = []
     
 
@@ -49,8 +50,8 @@ def getBookBlobs(imC):
             #cv2.drawContours(blank, [box], -1, col, 3)
             bookcontours.append([box])
             ndc += 1
-        elif boxiness >= bpar.enough_corners:
-            origcontours.append([c])
+        elif area > bpar.area_min/2 and boxiness >= bpar.enough_corners:
+            boxycontours.append([c])
             bookcontours.append([box])
             ndc += 1
             
@@ -74,7 +75,7 @@ def getBookBlobs(imC):
     #else:
         #print('\n\n              No Contours Match \n\n')
     print('\n\n   Looked at {:} unfiltered contours.\n\n'.format(nlc))
-    return bookcontours, origcontours, othercontours
+    return bookcontours, boxycontours, origcontours, othercontours
     
     
 ###
@@ -122,12 +123,13 @@ if __name__== '__main__':
 #   (e.g. a couple of corners close to bounding rectangle)
 #
 def boxy(blob, box):
-    dmins = np.zeros[4]
+    dmins = np.zeros(4)
     for i,d in enumerate( dmins ):
         dmins[i] = 999999999
         
     for i, corner in enumerate(box):
-        for p in blob:
+        for pl in blob:
+            p = pl[0] 
             di = pdist(p,corner)
             if di < dmins[i]:
                 dmins[i] = di

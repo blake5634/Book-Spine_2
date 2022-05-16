@@ -80,13 +80,13 @@ dsize = 10  # dilate px
 #    Cluster/Blob selection parameters
 #
 
-area_min = 2000
+area_min = 4000
 elong_min = 4
 elong_max =  100
 noise_area_threshold = 100
 
 corner_dist_max_px = 10
-enough_corners = 2
+enough_corners = 3
 
 
 

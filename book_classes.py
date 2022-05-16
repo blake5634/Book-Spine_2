@@ -51,13 +51,13 @@ class bookImage():
         if len(mask.shape) > 2:
             print('illegal image type for maskBin(): ',mask.shape)
             quit()
-        if len(self.image.shape)<3:
+        if len(self.image.shape)<2:
             print('incorrect image type for maskBin')
             quit()
         else:
-            if self.image.shape[:-1] != mask.shape:
+            if self.image.shape != mask.shape:
                 print('image and mask row/col shapes differ:')
-                print(self.image.shape[:-1], mask.shape)
+                print(self.image.shape, mask.shape)
                 quit()
             #return cv2.bitwise_and(self.image, mask) 
             #return self.image[mask]
