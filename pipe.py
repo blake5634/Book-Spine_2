@@ -148,10 +148,10 @@ def step00(imagedir, imagefilename):
                     cv2.imwrite(name, levelIblobs) 
         
             ##   Generate an image to show the cluster colors as a palette
-            if False:
+            if True:
                 imct = nf.Gen_cluster_colors(VQ_color_ctrs)
                 cv2.imshow("cluster colors ",imct)
-                cv2.waitKey(1000)  
+                cv2.waitKey(1000) 
     
 
             ############
@@ -169,8 +169,7 @@ def step01(imagedir, imagefilename):
     nm1 ='step{:02d}'.format(i-1)  # result of previous step
     nm  ='step{:02d}'.format(i)    # did we do this step already?
     
-    #ppl = readpick(nm1)      # payload from previous step
-    #[ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist , label_img, lcolor_img] 
+    [ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist , label_img, lcolor_img] = readpick(nm1)      # payload from previous step
     
     nm = 'step{:02d}'.format(i)  # do we need to compute this step???
     if pick_exists(nm):
@@ -180,6 +179,10 @@ def step01(imagedir, imagefilename):
         #
         #      Visualize the found contours
         #
+        imagefile = imagedir + imagefilename
+        bglabel = nf.Check_background(LabelImage)
+        
+        print('------------\n      Background: ',bglabel,'\n------------\n')
         
         fn_root = imagefilename.split('.')[0]
         nameTemplate = 'blobSet{:02d}_{:}.png'
@@ -194,56 +197,55 @@ def step01(imagedir, imagefilename):
         rejectcs = []
         rawcs = []
         for i in range(bpar.KM_Clusters):
-            fname = bpar.tmp_img_path + nameTemplate.format(i, fn_root)
-            print('Opening: ', fname)
-            
-            # read the binary image segemented by color image
-            im1 = cv2.imread(fname) 
-            im1Image = bc.bookImage(im1,bpar.scale)
-            
-            #  we need a gray scale image 
-            im1Image.image = im1Image.gray()
-        
-            
-            ##  1) convert to gray  ##  update: stored imgs changed to binary
-            
-            #timg = bc.bookImage(im1Image.gray(), im1Image.scale)
-            #bimg = timg.image
- 
-             
-            #  3) smooth with dilate and erode_kernel
-            
-            bimg = im1Image.image
-            b2 = cv2.erode(bimg, erode_kernel)
-            b3 = cv2.dilate(b2, dilate_kernel)
-            
-            #  4) mask the original image (im1Image)
-            
-            print('***************************8 testing')
-            
-            print(im1Image.ishape())
+            # skip the background color
+            if ( i == bglabel):
+                print('\n\n              Skipping BG color: ',bglabel,'\n\n')
+            else:
+                fname = bpar.tmp_img_path + nameTemplate.format(i, fn_root)
+                print('Opening: ', fname)
                 
-            print(im1Image)
+                # read the binary image segemented by color image
+                im1 = cv2.imread(fname) 
+                im1Image = bc.bookImage(im1,bpar.scale)
+                
+                #  we need a gray scale image 
+                im1Image.image = im1Image.gray()
             
-            
-            i2 = bc.bookImage(im1Image.maskBin(b3), im1Image.scale)
-            
-            pimtype(i2)
-            #  5) get contours
-            book_contours, boxy_contours, rawcontours, rejects =  t2.getBookBlobs(i2)
-            
-            
-            for b in book_contours:
-                bookcs.append(b)
-            for b in boxy_contours:
-                boxycs.append(b)
-            for r in rejects:
-                rejectcs.append(r)
-            for oc in rawcontours:
-                rawcs.append(oc)
+                
+                ##  1) convert to gray  ##  update: stored imgs changed to binary
+                
+                #timg = bc.bookImage(im1Image.gray(), im1Image.scale)
+                #bimg = timg.image
+    
+                
+                #  3) smooth with dilate and erode_kernel
+                
+                bimg = im1Image.image
+                b2 = cv2.erode(bimg, erode_kernel)
+                b3 = cv2.dilate(b2, dilate_kernel)
+                
+                #  4) mask the original image (im1Image)
+                
+                #print('***************************8 testing')
+                #print(im1Image.ishape())
+                #print(im1Image)
+                
+                
+                i2 = bc.bookImage(im1Image.maskBin(b3), im1Image.scale)
+                
+                pimtype(i2)
+                #  5) get contours
+                origcontours, boxycontours, rejects =  t2.getBookBlobs(i2)
+                
+                for b in origcontours:
+                    bookcs.append(b)
+                for b in boxycontours:
+                    boxycs.append(b)
+                for r in rejects:
+                    rejectcs.append(r) 
                 
         
-        print ('\n\n  Found {:} raw contours \n'.format(len(rawcs)))
+        print ('\n\n  Found {:} raw contours'.format(len(rawcs)))
         print ('\n\n  Found {:} rect contours \n'.format(len(bookcs)))
         print ('  Found {:} reject contours (A>20)\n\n'.format(len(rejectcs)))
         
@@ -251,20 +253,22 @@ def step01(imagedir, imagefilename):
         blank = cv2.imread('tcolor.png')  # copy of the scaled image for display
         blank2 = blank.copy()
         #for b in bookcs:
-        for b in rawcs:   # rough books
-            cv2.drawContours(blank, b, -1, col, 3)
+        for b in bookcs:   # rough books
+            cv2.drawContours(blank, b.contour, -1, col, 3)
             
         for b in boxycs:
-            cv2.drawContours(blank, b, -1, bpar.colors['green'],2)
+            print('Drawing boxy contour: ', b)
+            print('Drawing boxy contour.box: ', b.box)
+            cv2.drawContours(blank, b.contour, -1, bpar.colors['green'],2)
             
         for b in bookcs:  # rectangles
             col = bpar.colors['blue']
-            cv2.drawContours(blank, b, -1, col, 3)
+            cv2.drawContours(blank, [ b.box ], -1, col, 3)
 
         cv2.imshow(filename,blank)
         
         for r in rejectcs:
-            cv2.drawContours(blank2, r, -1, bpar.colors['green'], thickness=cv2.FILLED)
+            cv2.drawContours(blank2, r.contour, -1, bpar.colors['green'], thickness=cv2.FILLED)
             
         cv2.imshow('rejects', blank2)
         cv2.waitKey(-1)
@@ -352,8 +356,8 @@ if __name__=='__main__':
         clearpicks(clears)
 # read in image and perform VQ
 
-    filename = 'target.jpg'     # orig devel image    
-    filename = 'newtest01.jpg'
+    #filename = 'target.jpg'     # orig devel image    
+    #filename = 'newtest01.jpg'
     #filename = 'newtest02.jpg'
     filename = 'newtest03.jpg'
     

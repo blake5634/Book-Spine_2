@@ -12,20 +12,31 @@ class bblob:  # book blobs
         self.contour = c
         self.label = []
         self.M = cv2.moments(self.contour)
-        if self.M['m00'] > 0:
+        if self.M['m00'] != 0:
             cx = int(self.M['m10']/self.M['m00'])
             cy = int(self.M['m01']/self.M['m00'])
         else:
             cx = 20
             cy = 20 
-        self.centerpoint = (cx,cy)     
+        self.centerpoint = (cx,cy)
+        #print('self.contour shape:',self.contour.shape)
         self.perim = cv2.arcLength(self.contour, True)
         self.area  = cv2.contourArea(self.contour)
-        self.rect = cv2.minAreaRect(self.contour)
-        self.box = np.int0(cv2.boxPoints(self.rect))
+        self.rect = cv2.minAreaRect(self.contour) 
+        self.box = np.int0(cv2.boxPoints(self.rect)) 
         self.elong = box_elong(self.box)
         self.boxiness = boxy(self.contour,self.box)
-
+        
+    def __repr__(self):
+        s = 'book blob:\n'
+        s += '   contour shape:     '+str(self.contour.shape)+'\n'
+        s += '   contour length:    {:}\n'.format(len(self.contour))
+        s += '   centerpoint:       {:4},{:4}\n'.format(self.centerpoint[0],self.centerpoint[1])
+        s += '   area:           {:8}\n'.format(self.area)
+        s += '   box:            \n' + str(self.box)+'\n'
+        s += '   boxiness:          {:}\n'.format(self.boxiness)
+        return s
+        
 def getBookBlobs(imC):
     if len(imC.ishape()) != 2:
         print('getBookBlobs: input should be gray not BGR')
@@ -40,23 +51,23 @@ def getBookBlobs(imC):
     print('Found {:} contours'.format(len(contours)))
     im2 = im.copy()
     
-    origcontours = []
-    boxycontours = []
-    othercontours = []
+    bookcontours = []   # maybe book spines
+    boxycontours = []   # smaller blobs that are corner like
+    othercontours = []  # everything else above noise_area_threshold
     
     ndc = 0
     nlc = 0
     for i in range(len(contours)):
         #print('\nLooking at Contour ',i)
-        nlc +=1
-        c = bblob(contours[i]) 
+        nlc +=1        
+        print('raw contour shape: ', contours[i].shape)
+        c = bblob(contours[i])   # convert to book blob class
         if c.area > bpar.area_min  and c.elong > bpar.elong_min  and c.elong < bpar.elong_max:
             if c.area > 2.0*(bpar.area_min) :
                 col = bpar.colors['red']
             else:
                 col = bpar.colors['green']
-              
-            origcontours.append(c)
+            bookcontours.append(c)
             ndc += 1
         elif c.area > bpar.area_min/2 and c.boxiness >= bpar.enough_corners:
             boxycontours.append([c]) 
@@ -65,8 +76,7 @@ def getBookBlobs(imC):
         elif c.area > bpar.noise_area_threshold:
             othercontours.append(c)
  
-    print('\n\n   Looked at {:} unfiltered contours.\n\n'.format(nlc))
-    return  origcontours, boxycontours, othercontours
+    return  bookcontours, boxycontours, othercontours
     
     
 ##############
@@ -80,9 +90,9 @@ def boxy(blob, box):
         dmins[i] = 999999999
         
     for i, corner in enumerate(box):
-        for pl in blob:
-            p = pl[0] 
-            di = pdist(p,corner)
+        for pl in blob[0]:
+            #print('boxy: ',corner.shape, pl.shape)
+            di = pdist(pl,corner)
             if di < dmins[i]:
                 dmins[i] = di
     th = bpar.corner_dist_max_px
@@ -145,8 +155,8 @@ if __name__== '__main__':
         im1 = cv2.imread(fname) 
         im1Image = bc.bookImage(im1,bpar.scale)
         im1Image.image = im1Image.gray()
-        origcontours, boxycontours, othercontours =  getBookBlobs(im1Image) 
-        bookcs = bookcs + origcontours
+        bookcontours, boxycontours, othercontours =  getBookBlobs(im1Image) 
+        bookcs = bookcs + bookcontours
         
         
     print ('\n\n  Found {:} book contours \n\n'.format(len(bookcs)))

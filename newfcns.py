@@ -279,7 +279,7 @@ def score2color(score):
 
 ##########################
 #
-#   Look across top of image for label of "black"
+#   Look across top of image for label of "background color"
 #
 def Check_background(lab_image, outfile=False):
     bls = []
@@ -288,12 +288,16 @@ def Check_background(lab_image, outfile=False):
         for r in range(wheight):
             bls.append(lab_image[r+5,col])
     labs, cnt = np.unique(bls, return_counts=True)
+    print('TEST:  ')
+    print (labs)
+    print (cnt)
+    print('------')
     max = np.max(cnt)
     for l,c in zip(labs,cnt):
-        if c == max:
+        if c == max: # TODO:   argmax!!!
             lmax = l
             break
-    print('Most common label near top: {} ({}%)'.format(lmax, 100*max/np.sum(cnt)))
+    print('Most common label near top: {} ({:5.2f}%)'.format(lmax, 100*max/np.sum(cnt)))
     if outfile:
         f = open('metadata.txt','w')
         print('dark label, {}'.format(lmax), file=f)
@@ -456,18 +460,22 @@ def Trancept_bar_labeled(lab_img, yval,bw):
 #
 def Gen_cluster_colors(centers):
     FILLED = -1
+    N = len(centers)
+    gr = int((N+1)/2)  # grid rows
+    gc = 2             # grid cols
     rowh = 70
-    img_height_rows = rowh * bpar.KM_Clusters
-    img_width_cols = 300
-    img = np.zeros((img_height_rows,img_width_cols,3), np.uint8)
-    y=0
-    x=0
-    for i in range(len(centers)):
-        col = tuple([int(x) for x in centers[i]])
-        print('Color label {}: '.format(i),col) 
-        cv2.rectangle(img, (x,y), (img_width_cols,y+rowh), col, FILLED)
-        cv2.putText(img, 'cluster: {}'.format(i), (50, y+50), bpar.font, 1, (255, 255, 0), 2, cv2.LINE_AA)
-        y=y + rowh
+    col_width = 300 
+    img = np.zeros((gr*rowh,gc*col_width,3), np.uint8)
+    ctr = 0
+    for row in range(gr):
+        for col in range(gc):
+            color = tuple([int(x) for x in centers[ctr]])
+            print('Color label {}: '.format(ctr),color) 
+            x = col * col_width
+            y = row * rowh
+            cv2.rectangle(img, (x,y), (x+col_width,y+rowh), color, FILLED)
+            cv2.putText(img, 'cluster: {}'.format(ctr), (x+50, y+50), bpar.font, 1, (255, 255, 0), 2, cv2.LINE_AA)
+            ctr += 1
     return img
 #   
 #  Cluster colors by K-means
@@ -488,12 +496,12 @@ def KM(img,N):
     # dominant color is the palette color which occurs most frequently on the quantized image:
     dominant = centers[np.argmax(counts)]  # most common color label found
     
-    labeled_image = labels.reshape(img.shape[:-1])
+    codeword_image = labels.reshape(img.shape[:-1])
   
     #print('shape labels: {}'.format(labels.shape))
-    #labeled_image = labels.reshape(img.shape[:-1])
+    #codeword_image = labels.reshape(img.shape[:-1])
     #print('shape labels: {}'.format(labels.shape))
-    #print('shape labeled_image: {}'.format(labeled_image.shape))
+    #print('shape codeword_image: {}'.format(codeword_image.shape))
     
     #print('i (n pix)    Pallette')
     #for i in range(N):
@@ -513,7 +521,11 @@ def KM(img,N):
     #reshape
     newimg = newimg.reshape(img.shape)
     
-    return [newimg, labeled_image, centers, dist]
+    #   newimg:   an image where each pixel gets the color of its VQ codeword
+    #   codeword_image:  a gray image where each pixel has the label number
+    #   centers:   an array of the codeword centers (BGR points)
+    #   dist:   a 2x2 matrix of distances between codeword centers    
+    return [newimg, codeword_image, centers, dist]
 
 
 

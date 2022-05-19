@@ -6,7 +6,6 @@ import book_parms as bpar
 
 print('OpenCV version: ', cv2.__version__)
 
-
 # https://stackoverflow.com/questions/64021471/how-to-expand-a-particular-color-blob-with-4-pixels
 
 winname = 'interactive color blobs'
