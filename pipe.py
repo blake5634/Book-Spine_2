@@ -102,7 +102,7 @@ def step00(imagedir, imagefilename):
             img2 = img_orig_sm.icopy()  # no blur 
             
 
-            cv2.imwrite('tcolor.png', img_orig_sm.image)
+            cv2.imwrite('tcolor.png', img_orig_sm.image)  # true color image
             
             #############################################################
             #
@@ -114,11 +114,14 @@ def step00(imagedir, imagefilename):
             
             [ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist ] = nf.KM(img2.image, N)
             
-            label_img  = bc.bookImage(LabelImage,img2.scale)
-            lcolor_img = bc.bookImage(labelColorImg, img2.scale)
+            label_img  = bc.bookImage(LabelImage,img2.scale)    # pixel value = label num.
+            
+            lcolor_img = bc.bookImage(labelColorImg, img2.scale) # pixel value = label color
             print('Found ',len(VQ_color_ctrs), ' Color Clusters')
                     
-                
+            cv2.imwrite('label.png', label_img.image)
+            cv2.imwrite('lcolor.png', lcolor_img.image)
+            
             ################### 
             #
             #   write out binary blob images
@@ -136,8 +139,22 @@ def step00(imagedir, imagefilename):
                 for i in range(len(VQ_color_ctrs)):
                     #  write out a binary image for each VQ color cluster 
                     tmpimg = lcolor_img.icopy()
-                    tcol = VQ_color_ctrs[i]
-                    levelIblobs = np.where(lcolor_img.image == tcol , tmpimg.image, 0)
+                    #tcol = VQ_color_ctrs[i]
+                    #levelIblobs = np.where(lcolor_img.image == tcol , tmpimg.image, 0)
+                
+                    print('label_img is:')
+                    print(label_img)
+                    
+                    # need (r,c,3) image for np.where
+                    t = cv2.cvtColor(np.float32(label_img.image), cv2.COLOR_GRAY2BGR)
+                    print('t image is:')
+                    print(t.shape)
+                    
+                    levelIblobs = np.where(t == (i,i,i), tmpimg.image, 0)
+                    
+                    print('LevelIblobs image is:')
+                    print(levelIblobs.shape) 
+                    
                                 #  2) threshold
                     tim1 = bc.bookImage(levelIblobs, lcolor_img.scale)
                     # thresholding step moved here.
@@ -356,10 +373,10 @@ if __name__=='__main__':
         clearpicks(clears)
 # read in image and perform VQ
 
-    #filename = 'target.jpg'     # orig devel image    
+    filename = 'target.jpg'     # orig devel image    
     #filename = 'newtest01.jpg'
     #filename = 'newtest02.jpg'
-    filename = 'newtest03.jpg'
+    #filename = 'newtest03.jpg'
     
     imagedir = bpar.image_dir
     

@@ -60,7 +60,7 @@ def getBookBlobs(imC):
     for i in range(len(contours)):
         #print('\nLooking at Contour ',i)
         nlc +=1        
-        print('raw contour shape: ', contours[i].shape)
+        #print('raw contour shape: ', contours[i].shape)
         c = bblob(contours[i])   # convert to book blob class
         if c.area > bpar.area_min  and c.elong > bpar.elong_min  and c.elong < bpar.elong_max:
             if c.area > 2.0*(bpar.area_min) :

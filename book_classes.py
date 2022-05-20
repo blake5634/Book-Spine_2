@@ -38,6 +38,7 @@ class bookImage():
         resultStr += '   shape:    ' + str(self.ishape()) + '\n'
         resultStr += '   scale:    ' + str(self.scale) + 'mm/px' + '\n'
         resultStr += '   type:     ' + str(type(self.image)) + '\n'
+        resultStr += '   pixtype   ' + str(type(self.image[0,0]))+ '\n'
         return resultStr
         
     def thresh(self, t):

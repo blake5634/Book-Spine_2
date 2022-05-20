@@ -71,8 +71,8 @@ KMneighborDth = 12 # deg
 #  Cluster cleanup and bookfinding
 #
 
-esize = 8   # erode px
-dsize = 10  # dilate px
+esize = 12   # erode px
+dsize = 14 # dilate px
 
 
 ###################################################
@@ -80,7 +80,7 @@ dsize = 10  # dilate px
 #    Cluster/Blob selection parameters
 #
 
-area_min = 5000
+area_min = 4000
 elong_min = 4
 elong_max =  100
 noise_area_threshold = 100
