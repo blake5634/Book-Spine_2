@@ -461,7 +461,8 @@ def Trancept_bar_labeled(lab_img, yval,bw):
 def Gen_cluster_colors(centers):
     FILLED = -1
     N = len(centers)
-    gr = int((N+1)/2)  # grid rows
+    #  we're going to set up a grid of color patches 
+    gr = int((N+1)/2)
     gc = 2             # grid cols
     rowh = 70
     col_width = 300 
@@ -469,13 +470,14 @@ def Gen_cluster_colors(centers):
     ctr = 0
     for row in range(gr):
         for col in range(gc):
-            color = tuple([int(x) for x in centers[ctr]])
-            print('Color label {}: '.format(ctr),color) 
-            x = col * col_width
-            y = row * rowh
-            cv2.rectangle(img, (x,y), (x+col_width,y+rowh), color, FILLED)
-            cv2.putText(img, 'cluster: {}'.format(ctr), (x+50, y+50), bpar.font, 1, (255, 255, 0), 2, cv2.LINE_AA)
-            ctr += 1
+            if ctr < len(centers):
+                color = tuple([int(x) for x in centers[ctr]])
+                print('Color label {}: '.format(ctr),color) 
+                x = col * col_width
+                y = row * rowh
+                cv2.rectangle(img, (x,y), (x+col_width,y+rowh), color, FILLED)
+                cv2.putText(img, 'cluster: {}'.format(ctr), (x+50, y+50), bpar.font, 1, (255, 255, 0), 2, cv2.LINE_AA)
+                ctr += 1
     return img
 #   
 #  Cluster colors by K-means
