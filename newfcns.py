@@ -281,12 +281,20 @@ def score2color(score):
 #
 #   Look across top of image for label of "background color"
 #
-def Check_background(lab_image, outfile=False):
+def Check_background(lab_image, top_bottom, outfile=False):
     bls = []
-    wheight = int(lab_image.shape[0]/8)
+    if top_bottom not in ['BG_TOP', 'BG_BOTTOM']:
+        print('Unknown background region: ', top_bottom, '     ... quitting.')
+        quit()
+    # height of background estimation window in rows
+    wheight = int(lab_image.shape[0]/12)
+    if top_bottom == 'BG_TOP':
+        rows_to_check = range(wheight)
+    elif top_bottom == 'BG_BOTTOM':
+        rows_to_check = range(lab_image.shape[0]-wheight, lab_image.shape[0])
     for col in range(lab_image.shape[1]):
-        for r in range(wheight):
-            bls.append(lab_image[r+5,col])
+        for r in rows_to_check:
+            bls.append(lab_image[r,col])
     labs, cnt = np.unique(bls, return_counts=True)
     print('TEST:  ')
     print (labs)
@@ -297,10 +305,10 @@ def Check_background(lab_image, outfile=False):
         if c == max: # TODO:   argmax!!!
             lmax = l
             break
-    print('Most common label near top: {} ({:5.2f}%)'.format(lmax, 100*max/np.sum(cnt)))
+    print('Most common label {}: {} ({:5.2f}%)'.format(top_bottom, lmax, 100*max/np.sum(cnt)))
     if outfile:
-        f = open('metadata.txt','w')
-        print('dark label, {}'.format(lmax), file=f)
+        f = open('metadata.txt','a')
+        print('{}, {}'.format(top_bottom, lmax), file=f)
         f.close()
     return lmax
 

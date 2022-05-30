@@ -197,9 +197,11 @@ def step01(imagedir, imagefilename):
         #      Process and visualize the found contours
         #
         imagefile = imagedir + imagefilename
-        bglabel = nf.Check_background(LabelImage)
+        bglabel_top = nf.Check_background(LabelImage,'BG_TOP')
+        bglabel_bot = nf.Check_background(LabelImage,'BG_BOTTOM')
         
-        print('------------\n      Background: ',bglabel,'\n------------\n')
+        print('------------\n      Background: ',bglabel_top,'\n------------\n')
+        print('------------\n      Background: ',bglabel_bot,'\n------------\n')
         
         fn_root = imagefilename.split('.')[0]
         nameTemplate = 'blobSet{:02d}_{:}.png'
@@ -216,8 +218,8 @@ def step01(imagedir, imagefilename):
         rawcs = []
         for i in range(bpar.KM_Clusters):
             # skip the background color
-            if ( i == bglabel):
-                print('\n\n              Skipping BG color: ',bglabel,'\n\n')
+            if ( i == bglabel_top or i == bglabel_bot):
+                print('\n\n              Skipping BG color: ',i,'\n\n')
                 #fname = bpar.tmp_img_path + nameTemplate.format(i, fn_root)
                 #cv2.imshow('BGcolor image', cv2.imread(fname))
                 #cv2.waitKey(-1)
@@ -257,7 +259,7 @@ def step01(imagedir, imagefilename):
                 
                 pimtype(i2)
                 #  5) get contours
-                origcontours, boxycontours, rejects =  t2.getBookBlobs(i2)
+                ntotcs, origcontours, boxycontours, rejects =  t2.getBookBlobs(i2)
                 
                 for b in origcontours:
                     bookcs.append(b)
@@ -269,7 +271,8 @@ def step01(imagedir, imagefilename):
         
         print ('\n\n  Found {:} book contours'.format(len(bookcs)))
         print ('\n\n  Found {:} boxy contours \n'.format(len(boxycs)))
-        print ('  Found {:} reject contours (A>20)\n\n'.format(len(rejectcs)))
+        print ('  Found {:} reject contours (A>{:})\n\n'.format(len(rejectcs),bpar.noise_area_threshold))
+        print ('  Discarded {:} contours'.format(ntotcs - (len(bookcs)+len(boxycs)+len(rejectcs))))
         
         col = bpar.colors['red']
         blank = cv2.imread('tcolor.png')  # copy of the scaled image for display

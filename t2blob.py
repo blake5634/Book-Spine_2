@@ -25,7 +25,7 @@ class bblob:  # book blobs
         self.rect = cv2.minAreaRect(self.contour) 
         self.box = np.int0(cv2.boxPoints(self.rect)) 
         self.elong = box_elong(self.box)
-        self.boxiness = boxy(self.contour,self.box)
+        self.boxiness = boxy(self.contour, self.box)
         
     def __repr__(self):
         s = 'book blob:\n'
@@ -48,7 +48,8 @@ def getBookBlobs(imC):
     ret, bimg = cv2.threshold(im,127,255,cv2.THRESH_BINARY)  
     #contours, hierarchy = cv2.findContours(bimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contours, hierarchy = cv2.findContours(bimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    print('Found {:} contours'.format(len(contours)))
+    ntotcs = len(contours)
+    print('Found {:} contours'.format(ntotcs))
     im2 = im.copy()
     
     bookcontours = []   # maybe book spines
@@ -82,7 +83,7 @@ def getBookBlobs(imC):
         elif c.area > bpar.noise_area_threshold:
             othercontours.append(c)
  
-    return  bookcontours, boxycontours, othercontours
+    return  ntotcs, bookcontours, boxycontours, othercontours
     
     
 ##############
@@ -92,10 +93,22 @@ def getBookBlobs(imC):
 #
 
 def boxy(blob, box):
-    al = 0.75
-    score = al*boxyPerim(blob, box) + (1.0-al)*boxyCorners(blob,box)
+    a1 = bpar.boxy_coef_corners
+    a2 = bpar.boxy_coef_perim
+    a3 = bpar.boxy_coef_area 
+    #score = al*boxyPerim(blob, box) + (1.0-al)*boxyCorners(blob,box)
+    score = a1*boxyCorners(blob,box) + a2*boxyPerim(blob, box) + a3*boxyArea(blob, box)
+    #print('boxiness: {:4.1f} : {:4.1f},{:4.1f},{:4.1f} '.format(score, boxyCorners(blob,box), boxyPerim(blob, box), boxyArea(blob, box)))
+
     return score
     
+def boxyArea(blob, box):
+    ascale = 2000      # guestimate??    
+    d1 = pdist(box[0],box[1])
+    d2 = pdist(box[1],box[2])
+    box_area = d1*d2
+    adiff = np.minimum(1.0, np.abs((box_area - cv2.contourArea(blob))/ascale) )  # note contuour area < box area for all cases
+    return np.minimum(4.0, 4.0*(1.0 - adiff))
     
 def boxyPerim(blob, box):
     # use the difference in perimeter between min vol box and
@@ -104,13 +117,14 @@ def boxyPerim(blob, box):
     d1 = pdist(box[0],box[1])
     d2 = pdist(box[1],box[2])
     boxperimeter = float(2*(d1+d2))
-    perdiff = np.abs(boxperimeter - cv2.arcLength(blob,True))/boxperimeter
+    if boxperimeter < 0.001:
+        perdiff = 1.0
+    else:
+        perdiff = np.abs(boxperimeter - cv2.arcLength(blob,True))/boxperimeter
     if perdiff > 1.0:
         perdiff = 1.00
     score = (1-perdiff)*4   # 4 is perfect to match old boxy
     return score
-        
-
 
 def boxyCorners(blob, box):
     # use the number of box corners which are close to the contour. 
@@ -184,7 +198,7 @@ if __name__== '__main__':
         im1 = cv2.imread(fname) 
         im1Image = bc.bookImage(im1,bpar.scale)
         im1Image.image = im1Image.gray()
-        bookcontours, boxycontours, othercontours =  getBookBlobs(im1Image) 
+        n, bookcontours, boxycontours, othercontours =  getBookBlobs(im1Image) 
         bookcs = bookcs + bookcontours
         
         

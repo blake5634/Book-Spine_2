@@ -118,7 +118,8 @@ for pic_filename in img_paths:
     #
     #   Find background label
     #
-    backgnd = nf.Check_background(label_img.image)   
+    backgnd_top = nf.Check_background(label_img.image, 'BG_TOP')   
+    backgnd_bot = nf.Check_background(label_img.image, 'BG_BOTTOM')   
     
     MAX_LINE_SCORE = bpar.Line_Score_Thresh
 

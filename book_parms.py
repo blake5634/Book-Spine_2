@@ -23,9 +23,9 @@ deriv_win_size =     int(1.0*mm2pix)      # 1mm width
 smooth_size    = -1* int(10*mm2pix)    # <0:   do not smooth
 
 blur_flag = True
-blur_rad_mm       =     int(2)    # image must determine # pixels
+blur_rad_mm       =     0.75    # image must determine # pixels
 
-KM_Clusters = 15  # number of K-means clusters for color
+KM_Clusters = 20 # number of K-means clusters for color
  
 
 
@@ -49,8 +49,14 @@ elong_max =  12
 
 #   find "boxy" blobs (which have sharp 90deg corners
 
-boxy_area_min  = int(area_min *  0.5)
+boxy_area_min  = int(area_min *  0.4)
 boxy_threshold = 3.5   # combined net boxy score thresh. (0-4)
+
+# weights fro the combined net boxy score:
+
+boxy_coef_corners   = 0.4
+boxy_coef_perim     = 0.333
+boxy_coef_area      = 1.0 - boxy_coef_perim - boxy_coef_corners
 
 # for boxyCorners() method
 corner_dist_max_px = 50
