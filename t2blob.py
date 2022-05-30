@@ -62,17 +62,23 @@ def getBookBlobs(imC):
         nlc +=1        
         #print('raw contour shape: ', contours[i].shape)
         c = bblob(contours[i])   # convert to book blob class
+        
+        #
+        #    the most book-like contours
+        #
         if c.area > bpar.area_min  and c.elong > bpar.elong_min  and c.elong < bpar.elong_max:
-            if c.area > 2.0*(bpar.area_min) :
-                col = bpar.colors['red']
-            else:
-                col = bpar.colors['green']
             bookcontours.append(c)
             ndc += 1
-        elif c.area > bpar.area_min/2 and c.boxiness >= bpar.enough_corners:
-            boxycontours.append([c]) 
+        #
+        #   smaller but "boxy" contours (parts of spines)
+        #
+        elif c.area > bpar.boxy_area_min and c.boxiness >= bpar.enough_corners:
+            boxycontours.append(c) 
             ndc += 1
             
+        #
+        #   everything else except tiny ones
+        #
         elif c.area > bpar.noise_area_threshold:
             othercontours.append(c)
  
@@ -84,7 +90,25 @@ def getBookBlobs(imC):
 #  does the contour resemble part of a rectangle??
 #   (e.g. a couple of corners close to bounding rectangle)
 #
+
+
 def boxy(blob, box):
+    # use the difference in perimeter between min vol box and
+    #   the contour perimeter
+    #b1 = boxyOLD(blob,box)
+    d1 = pdist(box[0],box[1])
+    d2 = pdist(box[1],box[2])
+    boxperimeter = float(2*(d1+d2))
+    perdiff = np.abs(boxperimeter - cv2.arcLength(blob,True))/boxperimeter
+    if perdiff > 1.0:
+        perdiff = 1.00
+    score = (1-perdiff)*4   # 4 is perfect to match old boxy
+    return score
+        
+
+
+def boxyOLD(blob, box):
+    # use the number of box corners which are close to the contour. 
     dmins = np.zeros(4)
     for i,d in enumerate( dmins ):
         dmins[i] = 999999999
