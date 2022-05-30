@@ -194,7 +194,7 @@ def step01(imagedir, imagefilename):
     else:
         #############################################################
         #
-        #      Visualize the found contours
+        #      Process and visualize the found contours
         #
         imagefile = imagedir + imagefilename
         bglabel = nf.Check_background(LabelImage)
@@ -217,6 +217,9 @@ def step01(imagedir, imagefilename):
             # skip the background color
             if ( i == bglabel):
                 print('\n\n              Skipping BG color: ',bglabel,'\n\n')
+                #fname = bpar.tmp_img_path + nameTemplate.format(i, fn_root)
+                #cv2.imshow('BGcolor image', cv2.imread(fname))
+                #cv2.waitKey(-1)
             else:
                 fname = bpar.tmp_img_path + nameTemplate.format(i, fn_root)
                 print('Opening: ', fname)
@@ -262,30 +265,45 @@ def step01(imagedir, imagefilename):
                     rejectcs.append(r) 
                 
         
-        print ('\n\n  Found {:} raw contours'.format(len(rawcs)))
-        print ('\n\n  Found {:} rect contours \n'.format(len(bookcs)))
+        print ('\n\n  Found {:} book contours'.format(len(bookcs)))
+        print ('\n\n  Found {:} boxy contours \n'.format(len(boxycs)))
         print ('  Found {:} reject contours (A>20)\n\n'.format(len(rejectcs)))
         
         col = bpar.colors['red']
         blank = cv2.imread('tcolor.png')  # copy of the scaled image for display
-        blank2 = blank.copy()
-        #for b in bookcs:
+        blank2 = blank.copy()             #copy for the rejects
+        
+        
+        # Draw the books:
         for b in bookcs:   # rough books
             cv2.drawContours(blank, b.contour, -1, col, 3)
-            
+            cv2.drawContours(blank, [ b.box ], -1, bpar.colors['blue'], 3)
+            boxystr = '{:3.1f}'.format(b.boxiness)
+            blank = cv2.putText(blank, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['maroon'], 2, cv2.LINE_AA)
+
+        # draw the accepted boxy contours
         for b in boxycs:
-            print('Drawing boxy contour: ', b)
-            print('Drawing boxy contour.box: ', b.box)
+            #print('Drawing boxy contour: ', b)
+            #print('Drawing boxy contour.box: ', b.box)
+            boxystr = '{:3.1f}'.format(b.boxiness)
+            blank = cv2.putText(blank, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['yellow'], 2, cv2.LINE_AA)
             cv2.drawContours(blank, b.contour, -1, bpar.colors['green'],2)
-            
-        for b in bookcs:  # rectangles
-            col = bpar.colors['blue']
-            cv2.drawContours(blank, [ b.box ], -1, col, 3)
+            cv2.drawContours(blank, [b.box]  , -1, bpar.colors['blue'],  thickness=1)
 
         cv2.imshow(filename,blank)
         
         for r in rejectcs:
-            cv2.drawContours(blank2, r.contour, -1, bpar.colors['green'], thickness=cv2.FILLED)
+            if r.area > 200 and r.boxiness >= bpar.enough_corners:
+                #print('Found a reject boxy contour for drawing:')
+                #print(r)
+                cv2.drawContours(blank2, [r.box]  , -1, bpar.colors['blue'],  thickness=2) 
+            else:
+                cv2.drawContours(blank2, [r.box] , -1 , bpar.colors['maroon'], thickness=2)
+            
+            boxystr = '{:3.1f}'.format(r.boxiness)
+            blank2 = cv2.putText(blank2, boxystr, r.centerpoint, bpar.font, 0.7 , bpar.colors['maroon'], 2, cv2.LINE_AA)
+            cv2.drawContours(blank2, r.contour, -1, bpar.colors['green'], thickness=1)
+            #cv2.drawContours(blank2, r.contour, -1, bpar.colors['green'], thickness=cv2.FILLED)
             
         cv2.imshow('rejects', blank2)
         cv2.waitKey(-1)
@@ -377,11 +395,14 @@ if __name__=='__main__':
     #filename = 'newtest01.jpg'
     #filename = 'newtest02.jpg'
     #filename = 'newtest03.jpg'
+    #filename = 'newtest04.jpg'
     
     imagedir = bpar.image_dir
     
+    #
+    #   Here's where the magic happens!
+    #    
     step00(imagedir,filename)
-# trace contours, ID rectangles, and display
     step01(imagedir,filename)
     #step02()
     
