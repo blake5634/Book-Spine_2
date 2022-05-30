@@ -2,16 +2,15 @@ import cv2
 
 scale = 2  # downsample image by this much
 d2r = 3.141592638*2/360.0
-
 #   ~5.0 pix/mm  (measured from original unscaled target img)
-
 pix2mm = 0.2 * float(scale)   # convert pix * pix2mm = xx mm
                                     # measure off unscaled target image
 mm2pix = float(1.0)/pix2mm 
 
 
-image_dir = 'tiny/'
-tmp_img_path = 'tmp_images/'
+image_dir = 'tiny/'               # raw input images
+tmp_img_path = 'tmp_images/'      # images segmented by VQ blobs (binary)
+
 ################################################
 #
 #    Image input stage and color VQ params
@@ -26,8 +25,64 @@ smooth_size    = -1* int(10*mm2pix)    # <0:   do not smooth
 blur_flag = False
 blur_rad_mm       =     int(4.0)    # image must determine # pixels
 
-KM_Clusters = 20  # number of K-means clusters for color
+KM_Clusters = 15  # number of K-means clusters for color
  
+
+
+##################################################
+#
+#  Cluster cleanup 
+#
+
+esize = 12   # erode px
+dsize = 20  # dilate px
+
+
+###################################################
+#
+#    Cluster/Blob selection parameters
+#
+
+area_min = 3000
+elong_min = 4
+elong_max =  100
+noise_area_threshold = 100
+
+#   find "boxy" blobs (which have sharp 90deg corners
+
+boxy_area_min = 800
+enough_corners = 3.7   # also perimeter based boxy score thresh.
+
+# for boxyOLD() method
+corner_dist_max_px = 50
+
+
+
+
+font = cv2.FONT_HERSHEY_SIMPLEX
+org = (50,50)
+
+colors = {'black':(0,0,0), 'white':(255,255,255), 'blue':(255,0,0), 'green':(0,255,0), 'red':(0,0,255),'yellow':(0,255,255),
+          'acqua':(255,255,0),'fuchsia':(255,0,255),'maroon':(0,0,128),'navy':(128,0,0),'olive':(0,128,128)}
+'''
+    Black: (0, 0, 0)
+    White: (255, 255, 255)
+    Red: (255, 0, 0)
+    Green: (0, 255, 0)
+    Blue: (0, 0, 255)
+    Aqua: (0, 255, 255)
+    Fuchsia: (255, 0, 255)
+    Maroon: (128, 0, 0)
+    Navy: (0, 0, 128)
+    Olive: (128, 128, 0)
+    Purple: (128, 0, 128)
+    Teal: (0, 128, 128)
+    Yellow: (255, 255, 0)
+'''
+
+#
+#            Deprecated Parameters
+#
 
 ######################################################
 #
@@ -65,47 +120,3 @@ line_VQ_Nclusters = 7
 KMneighborDX =  5 #mm
 KMneighborDth = 12 # deg
 
-
-##################################################
-#
-#  Cluster cleanup and bookfinding
-#
-
-esize = 12   # erode px
-dsize = 14 # dilate px
-
-
-###################################################
-#
-#    Cluster/Blob selection parameters
-#
-
-area_min = 4000
-elong_min = 4
-elong_max =  100
-noise_area_threshold = 100
-
-corner_dist_max_px = 10
-enough_corners = 3
-
-
-
-
-font = cv2.FONT_HERSHEY_SIMPLEX
-colors = {'black':(0,0,0), 'white':(255,255,255), 'blue':(255,0,0), 'green':(0,255,0), 'red':(0,0,255),'yellow':(0,255,255),
-          'acqua':(255,255,0),'fuchsia':(255,0,255),'maroon':(0,0,128),'navy':(128,0,0),'olive':(0,128,128)}
-'''
-    Black: (0, 0, 0)
-    White: (255, 255, 255)
-    Red: (255, 0, 0)
-    Green: (0, 255, 0)
-    Blue: (0, 0, 255)
-    Aqua: (0, 255, 255)
-    Fuchsia: (255, 0, 255)
-    Maroon: (128, 0, 0)
-    Navy: (0, 0, 128)
-    Olive: (128, 128, 0)
-    Purple: (128, 0, 128)
-    Teal: (0, 128, 128)
-    Yellow: (255, 255, 0)
-'''
