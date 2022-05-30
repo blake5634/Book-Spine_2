@@ -22,8 +22,8 @@ tmp_img_path = 'tmp_images/'      # images segmented by VQ blobs (binary)
 deriv_win_size =     int(1.0*mm2pix)      # 1mm width
 smooth_size    = -1* int(10*mm2pix)    # <0:   do not smooth
 
-blur_flag = False
-blur_rad_mm       =     int(4.0)    # image must determine # pixels
+blur_flag = True
+blur_rad_mm       =     int(2)    # image must determine # pixels
 
 KM_Clusters = 15  # number of K-means clusters for color
  
@@ -35,28 +35,28 @@ KM_Clusters = 15  # number of K-means clusters for color
 #
 
 esize = 12   # erode px
-dsize = 20  # dilate px
+dsize = 30  # dilate px 
 
 
-###################################################
+################################################# ##
 #
 #    Cluster/Blob selection parameters
 #
 
-area_min = 3000
+area_min = 2000
 elong_min = 4
-elong_max =  100
-noise_area_threshold = 100
+elong_max =  12
 
 #   find "boxy" blobs (which have sharp 90deg corners
 
-boxy_area_min = 800
-enough_corners = 3.7   # also perimeter based boxy score thresh.
+boxy_area_min  = int(area_min *  0.5)
+boxy_threshold = 3.5   # combined net boxy score thresh. (0-4)
 
-# for boxyOLD() method
+# for boxyCorners() method
 corner_dist_max_px = 50
 
-
+# we will just dicard blobs smaller than:
+noise_area_threshold = 250
 
 
 font = cv2.FONT_HERSHEY_SIMPLEX

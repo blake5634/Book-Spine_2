@@ -72,7 +72,7 @@ def getBookBlobs(imC):
         #
         #   smaller but "boxy" contours (parts of spines)
         #
-        elif c.area > bpar.boxy_area_min and c.boxiness >= bpar.enough_corners:
+        elif c.area > bpar.boxy_area_min and c.boxiness >= bpar.boxy_threshold:
             boxycontours.append(c) 
             ndc += 1
             
@@ -91,8 +91,13 @@ def getBookBlobs(imC):
 #   (e.g. a couple of corners close to bounding rectangle)
 #
 
-
 def boxy(blob, box):
+    al = 0.75
+    score = al*boxyPerim(blob, box) + (1.0-al)*boxyCorners(blob,box)
+    return score
+    
+    
+def boxyPerim(blob, box):
     # use the difference in perimeter between min vol box and
     #   the contour perimeter
     #b1 = boxyOLD(blob,box)
@@ -107,7 +112,7 @@ def boxy(blob, box):
         
 
 
-def boxyOLD(blob, box):
+def boxyCorners(blob, box):
     # use the number of box corners which are close to the contour. 
     dmins = np.zeros(4)
     for i,d in enumerate( dmins ):

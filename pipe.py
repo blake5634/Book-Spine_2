@@ -206,6 +206,7 @@ def step01(imagedir, imagefilename):
             
         # set up morph kernels
         erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,  (bpar.esize, bpar.esize))
+        erode_kernelSm = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,  (int(bpar.esize/2), int(bpar.esize/2)))
         dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (bpar.dsize, bpar.dsize))
         
         ncontours = 0
@@ -243,7 +244,8 @@ def step01(imagedir, imagefilename):
                 bimg = im1Image.image
                 b2 = cv2.erode(bimg, erode_kernel)
                 b3 = cv2.dilate(b2, dilate_kernel)
-                
+                b2 = cv2.erode(bimg, erode_kernelSm)
+
                 #  4) mask the original image (im1Image)
                 
                 #print('***************************8 testing')
@@ -273,35 +275,51 @@ def step01(imagedir, imagefilename):
         blank = cv2.imread('tcolor.png')  # copy of the scaled image for display
         blank2 = blank.copy()             #copy for the rejects
         
-        
+        def aprint(image, b):
+            # print the area on image
+            astring = '{:}'.format(int(b.area))
+            ctr = (b.centerpoint[0], b.centerpoint[1]+15)  # offset down a bit
+            image = cv2.putText(image, astring, ctr, bpar.font, 0.5, bpar.colors['white'], 2, cv2.LINE_AA)
+            
+        def bprint(image, b):
+            # print the boxiness on image
+            boxystr = '{:3.1f}'.format(b.boxiness)
+            image = cv2.putText(image, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['maroon'], 2, cv2.LINE_AA)
+            
         # Draw the books:
         for b in bookcs:   # rough books
             cv2.drawContours(blank, b.contour, -1, col, 3)
             cv2.drawContours(blank, [ b.box ], -1, bpar.colors['blue'], 3)
-            boxystr = '{:3.1f}'.format(b.boxiness)
-            blank = cv2.putText(blank, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['maroon'], 2, cv2.LINE_AA)
+            bprint(blank, b)
+            aprint(blank, b)            
 
-        # draw the accepted boxy contours
+        # draw the smaller but boxy contours
         for b in boxycs:
             #print('Drawing boxy contour: ', b)
             #print('Drawing boxy contour.box: ', b.box)
-            boxystr = '{:3.1f}'.format(b.boxiness)
-            blank = cv2.putText(blank, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['yellow'], 2, cv2.LINE_AA)
+            
+            bprint(blank, b)
+            aprint(blank, b)            
+            
+            #boxystr = '{:3.1f}'.format(b.boxiness)
+            #blank = cv2.putText(blank, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['yellow'], 2, cv2.LINE_AA)
             cv2.drawContours(blank, b.contour, -1, bpar.colors['green'],2)
             cv2.drawContours(blank, [b.box]  , -1, bpar.colors['blue'],  thickness=1)
 
         cv2.imshow(filename,blank)
         
         for r in rejectcs:
-            if r.area > 200 and r.boxiness >= bpar.enough_corners:
+            if r.area > 200 and r.boxiness >= bpar.boxy_threshold:
                 #print('Found a reject boxy contour for drawing:')
                 #print(r)
                 cv2.drawContours(blank2, [r.box]  , -1, bpar.colors['blue'],  thickness=2) 
             else:
                 cv2.drawContours(blank2, [r.box] , -1 , bpar.colors['maroon'], thickness=2)
             
-            boxystr = '{:3.1f}'.format(r.boxiness)
-            blank2 = cv2.putText(blank2, boxystr, r.centerpoint, bpar.font, 0.7 , bpar.colors['maroon'], 2, cv2.LINE_AA)
+            bprint(blank2, r)
+            aprint(blank2, r)            
+            #boxystr = '{:3.1f}'.format(r.boxiness)
+            #blank2 = cv2.putText(blank2, boxystr, r.centerpoint, bpar.font, 0.7 , bpar.colors['maroon'], 2, cv2.LINE_AA)
             cv2.drawContours(blank2, r.contour, -1, bpar.colors['green'], thickness=1)
             #cv2.drawContours(blank2, r.contour, -1, bpar.colors['green'], thickness=cv2.FILLED)
             
