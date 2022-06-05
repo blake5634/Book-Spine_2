@@ -206,6 +206,9 @@ def step01(imagedir, imagefilename):
         fn_root = imagefilename.split('.')[0]
         nameTemplate = 'blobSet{:02d}_{:}.png'
             
+        blank = cv2.imread('tcolor.png')  # copy of the scaled image for display
+        blank2 = blank.copy()             #copy for the rejects
+        
         # set up morph kernels
         erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,  (bpar.esize, bpar.esize))
         erode_kernelSm = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,  (int(bpar.esize/2), int(bpar.esize/2)))
@@ -259,7 +262,7 @@ def step01(imagedir, imagefilename):
                 
                 pimtype(i2)
                 #  5) get contours
-                ntotcs, origcontours, boxycontours, rejects =  t2.getBookBlobs(i2)
+                ntotcs, origcontours, boxycontours, rejects =  t2.getBookBlobs(i2,blank2)
                 
                 for b in origcontours:
                     bookcs.append(b)
@@ -275,8 +278,6 @@ def step01(imagedir, imagefilename):
         print ('  Discarded {:} contours'.format(ntotcs - (len(bookcs)+len(boxycs)+len(rejectcs))))
         
         col = bpar.colors['red']
-        blank = cv2.imread('tcolor.png')  # copy of the scaled image for display
-        blank2 = blank.copy()             #copy for the rejects
         
         def aprint(image, b):
             # print the area on image
@@ -286,8 +287,13 @@ def step01(imagedir, imagefilename):
             
         def bprint(image, b):
             # print the boxiness on image
-            boxystr = '{:3.1f}'.format(b.boxiness)
-            image = cv2.putText(image, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['maroon'], 2, cv2.LINE_AA)
+            bx = b.boxiness
+            if bx > 2.0:
+                color = bpar.colors['yellow']
+            else:
+                color = bpar.colors['maroon']
+            boxystr = '{:3.1f}'.format(bx)
+            image = cv2.putText(image, boxystr, b.centerpoint, bpar.font, 0.7 , color, 2, cv2.LINE_AA)
             
         # Draw the books:
         for b in bookcs:   # rough books

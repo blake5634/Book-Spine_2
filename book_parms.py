@@ -54,8 +54,8 @@ boxy_threshold = 3.5   # combined net boxy score thresh. (0-4)
 
 # weights fro the combined net boxy score:
 
-boxy_coef_corners   = 0.4
-boxy_coef_perim     = 0.333
+boxy_coef_corners   = 1
+boxy_coef_perim     = 0
 boxy_coef_area      = 1.0 - boxy_coef_perim - boxy_coef_corners
 
 # for boxyCorners() method

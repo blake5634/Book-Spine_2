@@ -1,4 +1,15 @@
 1) hough-transform - find lines, esp. vertical ones
+     cf  https://github.com/Dianaaaa/book-spine-segmentation/blob/master/book-hough.py
+     
+        img_gray, img = pre_process(path)
+        edges = cv2.Canny(img, 50, 150, apertureSize=3)
+        lines = cv2.HoughLines(edges, 1, np.pi/180, 160)  # 最后一个参数可调节，会影响直线检测的效果
+        lines1 = lines[:, 0, :]
+        houghlines = line_sifting(lines1)  # 存储并筛选检测出的垂直线
+        img_show = draw_vertical(img_gray, houghlines)
+        img_segmentation = segmentation(img_gray, houghlines)
+        
+        
 2) color blobs - select book-like shapes ("booktangles") from VQ-labeled centroid color blobs
 3) slants - find lines with big gradients across them (at various angles)
 4) "Educate" a deep NN with progressions of synthetic images of increasing difficulty
