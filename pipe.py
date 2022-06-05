@@ -2,7 +2,7 @@
 #
 #    Pipeline for finding books featuring result caching
 #
-  
+
 import numpy as np
 import cv2
     
@@ -10,8 +10,8 @@ import cv2
 #  book finding functions from this project
 import book_classes as bc 
 import book_parms as bpar 
-import newfcns as nf
-import t2blob as t2
+import VQ_functions as vq
+import blob_processing as bpr
 
 import time
 import sys
@@ -112,7 +112,7 @@ def step00(imagedir, imagefilename):
             print('Starting colors VQ with ', bpar.KM_Clusters,' clusters.')
             N = bpar.KM_Clusters  # how many VQ clusters to generate
             
-            [ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist ] = nf.KM(img2.image, N)
+            [ labelColorImg,  LabelImage, VQ_color_ctrs, color_dist ] = vq.KM(img2.image, N)
             
             label_img  = bc.bookImage(LabelImage,img2.scale)    # pixel value = label num.
             
@@ -166,7 +166,7 @@ def step00(imagedir, imagefilename):
         
             ##   Generate an image to show the cluster colors as a palette
             if True:
-                imct = nf.Gen_cluster_colors(VQ_color_ctrs)
+                imct = vq.Gen_cluster_colors(VQ_color_ctrs)
                 cv2.imshow("cluster colors ",imct)
                 cv2.waitKey(1000) 
     
@@ -197,8 +197,8 @@ def step01(imagedir, imagefilename):
         #      Process and visualize the found contours
         #
         imagefile = imagedir + imagefilename
-        bglabel_top = nf.Check_background(LabelImage,'BG_TOP')
-        bglabel_bot = nf.Check_background(LabelImage,'BG_BOTTOM')
+        bglabel_top = vq.Check_background(LabelImage,'BG_TOP')
+        bglabel_bot = vq.Check_background(LabelImage,'BG_BOTTOM')
         
         print('------------\n      Background: ',bglabel_top,'\n------------\n')
         print('------------\n      Background: ',bglabel_bot,'\n------------\n')
@@ -262,7 +262,7 @@ def step01(imagedir, imagefilename):
                 
                 pimtype(i2)
                 #  5) get contours
-                ntotcs, origcontours, boxycontours, rejects =  t2.getBookBlobs(i2,blank2)
+                ntotcs, origcontours, boxycontours, rejects =  bpr.getBookBlobs(i2,blank2)
                 
                 for b in origcontours:
                     bookcs.append(b)

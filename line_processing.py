@@ -1,0 +1,415 @@
+import cv2
+import numpy as np
+import glob as gb
+import book_parms as bpar
+import book_classes as bc
+import matplotlib.pyplot as plt
+import numpy as np
+from time import sleep
+
+import pickle     # for storing pre-computed K-means clusters
+import sys as sys
+import os as os
+#
+#  new functions by BH
+#
+##
+d2r = 2*np.pi/360.0
+
+##s
+# Convert XY rel LL corner to row, col
+#
+##  from   XY referenced to center of img:
+#
+#                       |Y
+#                       |
+#                       |
+#      -----------------------------------
+#         X             |\
+#                       |  (img_width_cols/2,img_height_rows/2)
+#                       |
+#                       |
+#
+#    to classic image proc coordinates:
+#      0/0------- col ----->
+##      |
+#       row
+#       |
+#       |
+#       V
+##
+
+
+def Get_line_params(imgObj, th, xintercept, llength, bias, w=None):
+    '''
+    imgObj = the bookImage instance for scale
+    th = angle in degrees
+    xintercept = in mm
+    llength = length of line (mm)
+    ybias = location of "y=0" line (vertical shift)
+    w = width of analysis window (perp to line)
+    
+    returns dictionary of line info
+    '''
+    d = {}
+    d['th'] = th
+    d['xintercept'] = xintercept
+    d['m0'] = np.tan(th*d2r) # slope (mm/mm)
+    d['b0'] = -d['m0']*xintercept  # mm
+    d['ybias'] = bias 
+    
+    
+    # compute xmin and xmax
+    x_line_len_mm = abs((llength)*np.cos(th*d2r)) # mm
+    if x_line_len_mm < 0.5:
+        x_line_len_mm = 2.0
+
+    d['xmin'] = xintercept - x_line_len_mm/2.0
+    d['xmax'] = xintercept + x_line_len_mm/2.0
+
+    #  window upper bound (window width (mm) is perp to line but we need to go straight up)
+    #  rV = distance to upper bound (vertical) mm
+    if w:
+        d['w'] = w
+        d['rV'] = abs(w/np.sin(th*d2r-np.pi/2)) # mm  (a delta so there's no origin offset)
+        tmp = int(d['rV'] / imgObj.scale)     #  mm / mmPerPx 
+        if tmp < 2:  # prevent tiny windows
+            tmp = 2
+        d['rVp'] = tmp
+         
+    #d['ybias_mm'] = -d['b0']/d['m0']  # y intercept
+    assert (d['xintercept'] > d['xmin'] and d['xintercept'] <= d['xmax']), 'bad x-value: '+str(d['xintercept'])
+
+    return d
+
+
+
+
+
+
+#
+#
+#  Get edge score of a line through image
+#
+#   y = mx+b  (y=row, x=col)
+#
+#   1) strike a vertical at each x value
+#   2) determine distance up/down to scan to reach window width w (rV, rVp)
+#   3) append all VQ labels along that vertical
+#   4) find dominant color label on either side of line- look for uniformity
+#
+#   NEW:   All coordinates and radii etc are in mm 
+#
+#    testimage --- a bookimage object to mark up for testing:  must be same size as img.
+#
+def Get_line_score(img, w, ld, cdist, testimage):
+    '''
+    img = bookImage() class
+    w   = width of line analysis window (90deg from line) (mm)
+    ld = line parameter dict:
+        ld['xintercept'] = where line crosses vertical centerline of image (X=0) (mm)
+        ld['th'] = angle in deg relative to 03:00 on clock
+        ld['llen'] = length of line segment (mm)
+        ld['bias'] = vertical shift of the line center (mm)
+    cdist = matrix of color distances (Euclid) btwn VQ centers
+    '''
+    
+    img_height_rows = img.rows # height/rows
+    img_width_cols = img.cols   
+    
+    #print('xmin/max mm: {:5.1f}, {:5.1f}'.format( ld['xmin'], ld['xmax'])) 
+    
+    ## make sure the "testimage" is same shape as input image (img)
+    assert img.ishape()[0] == testimage.ishape()[0], 'Image shapes differ (rows)- blackout test INVALID'
+    assert img.ishape()[1] == testimage.ishape()[1], 'Image shapes differ (cols)- blackout test INVALID'
+    
+    assert img.image.shape[0] == testimage.image.shape[0], 'Image shapes differ (rows)- blackout test INVALID'
+    assert img.image.shape[1] == testimage.image.shape[1], 'Image shapes differ (cols)- blackout test INVALID'
+
+     
+        
+    #study pixels above and below line at all columns in range   
+    vals_abv = []  # values above the line (for all x values)
+    vals_bel = []  #        below 
+    ncolsLine = 0
+    nvals_app = 0 
+    
+    #pixelInmm = img.scale
+    ##   convert x limits of line from mm to row/col
+    dummy, xmin_px = img.XYmm2RC(ld['xmin'],0)
+    dummy, xmax_px = img.XYmm2RC(ld['xmax'],0)
+    
+    #print('GLS: colMin/ColMax (px)',xmin_px, xmax_px)
+    
+        
+    for col in range(xmin_px,xmax_px):
+
+        X0, dummy = img.RC2XYmm(0,col)
+        # Here we evaluate the line forming the center of our "book spine"
+        ymm = ld['m0']*X0 + ld['b0'] + ld['ybias']  # evaluate the line
+        row, col2 = img.XYmm2RC(X0,ymm)    # convert ymm to row 
+        
+        
+        #print('row: {:}  col: {:}  col2: {:}'.format(row,col,col2))
+        if abs(col-col2) > 1: # just a consistency check
+            print('somethings wrong!!!')
+            quit()
+        #print ('GLS:     X:   {:5.1f}mm   Y: {:5.1f}mm'.format(X0, ymm))
+        #print ('GLS:     row: {:5}      col: {:5}  px'.format(row, col))
+        
+        #xmm1 = img.RC2XYmm(row,col)
+        #print ('GLS:     RC->XYmm:  ')
+        #print ('GLS:     X:   {:5.1f}mm   Y: {:5.1f}mm'.format(X0, ymm))
+
+        #x = input('ENTER')
+        
+        TST_MODE = 'color'  
+        blackoutcolor = (150,0,0)
+        
+        if not ((row > img_height_rows-1 or row < 0) or (col > img_width_cols-1 or col < 0)): # line not outside image?
+            ############################
+            # above the line
+            #print('looking at rows: ', row-ld['rVp'], row+ld['rVp'], ' at col: ', col)
+            for row1 in range(row,row-ld['rVp'],-1): # higher rows #s are "lower"
+                if  row1 > 0 and row1 < img_height_rows:
+                    #print('            Looking at (above): {}, {}'.format(row1,col))
+                    #vals_abv.append(Get_pix_byRC(img,row1,col)) # accum. labels in zone above
+                    vals_abv.append(img.image[row1,col]) # accum. labels in zone above
+                    #
+                    #
+                    if TST_MODE=='color':
+                        testimage.set_px_RC(row1,col, blackoutcolor) # black out tested pixel
+                    if TST_MODE=='label':
+                        #print('-------------------   GLS: self shape  /  testimg shape / value:' , np.shape(img.image), np.shape(testimage.image), 0)
+                        testimage.set_px_RC(row1,col, 0) # black out tested pixel
+            ############################
+            # below the line
+            for row1 in range(row, row+ld['rVp'],1):
+                if row1 < img_height_rows and row1 > 0:  # 
+                    #print('            Looking at (below): {}, {}'.format(row1,col))
+                    #vals_bel.append(Get_pix_byRC(img,row1,col))
+                    vals_bel.append(img.image[row1,col])
+                    #
+                    #
+                    if TST_MODE=='color':
+                        testimage.set_px_RC(row1,col, blackoutcolor) # black out tested pixel
+                    if TST_MODE=='label':
+                        #print('-------------------   GLS: self shape  /  testimg shape / value:' , np.shape(img.image), np.shape(testimage.image), 0)
+                        testimage.set_px_RC(row1,col, 0) # black out tested pixel
+    
+    
+    GLS_VERBOSE = False
+    #
+    #  If we got enough pixels in our window for meaningful result:
+    #
+    if GLS_VERBOSE:
+        print('GLS: len: vals above',len(vals_abv))
+        print('GLS: len: vals below',len(vals_bel))
+    
+    if len(vals_abv) > bpar.min_line_vals and len(vals_bel) > bpar.min_line_vals: 
+        #print('shape vals: {}'.format(np.shape(vals_abv)))
+        #print('sample: vals: ', vals_abv[0:10])
+        labs_abv, cnts_abv = np.unique(vals_abv, return_counts=True)
+        labs_bel, cnts_bel = np.unique(vals_bel, return_counts=True)
+        #print('shape: labels_abv: {}, counts_abv: {}   Data: '.format(np.shape(labs_abv),np.shape(cnts_abv)))
+        #print(labs_abv, cnts_abv)
+        #print('labels above, below: (1st 100 samples)')
+        #print(vals_abv[0:100], vals_bel[0:100])
+        
+        if GLS_VERBOSE:
+            print('')
+            print('GLS: labels above: ', labs_abv)
+            print('GLS: counts above: ', cnts_abv)
+            print('GLS: labels below: ', labs_bel)
+            print('GLS: counts below: ', cnts_bel)
+            
+        dom_lab_abv = labs_abv[np.argmax(cnts_abv)]   # which is most common label above?
+        dom_lab_bel = labs_bel[np.argmax(cnts_bel)]
+        dom_abv = np.max(cnts_abv)/np.sum(cnts_abv)  # how predominant? (0-1)
+        dom_bel = np.max(cnts_bel)/np.sum(cnts_bel)  # how predominant? (0-1)
+        scoredetails = [dom_lab_abv, dom_abv, dom_lab_bel, dom_bel]
+
+        
+        if GLS_VERBOSE:
+            print('GLS: Dominant labels: above: {:5} below: {:5}'.format(dom_lab_abv,dom_lab_bel))
+            print('GLS: Dominance:       above: {:5.3f} below: {:5.3f}'.format(dom_abv,dom_bel))
+        # is the dominant color above line == dom color below?
+        Method = bpar.Color_Dist_Method
+        if Method == 1:
+            color_distance = 0.01* cdist[dom_lab_abv, dom_lab_bel] + 0.1  # keep non zero
+        elif Method == 2:
+            if dom_lab_abv != dom_lab_bel:
+                color_distance = 150    # to match typical color distances
+            else:
+                color_distance = 0.0
+        else:
+            print('GLS: Illegal color Distance Method (1 or 2)')
+            quit()
+        diff_score = color_distance/(dom_abv*dom_bel)  # weighted difference (smaller is better!)
+    else:
+        #x = input('\n\n\n[enter] to continue (0)')
+        diff_score =  99999999999  # a really really bad score
+    
+    #x = input('\n\n\n[enter] to continue ({:5.2f})'.format(diff_score))
+    cv2.imshow('testimage (blackout data points used)', testimage.image)
+    if GLS_VERBOSE:
+        print('GLS: Final Line Score: {:5.3f}'.format(diff_score))
+          
+    return diff_score, scoredetails
+                    
+                
+##   convert score to a color
+def score2color(score):
+    c = None
+    brackets = [0.1, 0.2, 0.4, 0.5, 0.6, 1.05]  # color by fraction of threshold
+    
+    scorescale = 1
+    
+    brackets = [y*bpar.Line_Score_Thresh  for y in brackets]
+    colors  = ['red', 'green', 'blue', 'yellow', 'white', 'black']
+    for i,t in enumerate(brackets):
+        if score < brackets[i]:
+            c = colors[i]
+            break
+    return c
+            
+#
+#  Check along top for typical bacgkround pixels
+#
+ 
+#
+#  Apply criteria to gaps
+#
+def Gap_filter(gaps,img, tmin=20, blacklabel=6):
+    img_height=img.shape[0]
+    img_width=img.shape[1]
+    # tmin:        min width pixels
+    # blacklabel:  int label of background black
+
+    halfway = int(img_height/2)
+    candidates = []
+    for g in gaps:
+        #
+        #  exclude
+        #
+        # 1) narrow gaps
+        width = abs(g[0]-g[1])
+        if width < tmin:
+            print('found a very narrow gap')
+            continue
+        # 2) gaps that match background
+        values = []
+        for c1 in range(width):
+            col = g[0]+c1-1
+            for r in range(halfway):
+                row = halfway + r -1 
+                if col < img_width:
+                    values.append(img[row,col])
+        (val,cnts) = np.unique(values, return_counts=True)
+        if val[np.argmax(cnts)] == blacklabel:  # background
+            print('found a black gap')
+            continue
+        else: # we didn't exclude this gap
+            candidates.append(g)
+    return candidates
+#
+#
+#
+def Gen_gaplist(cross): 
+    cm1=0
+    gaps = []
+    for c in cross:
+        if c < 0:
+            c = c*-1
+        gaps.append([cm1,c])
+        cm1 = c
+    return gaps
+
+#
+#  neg and pos zero crossings
+#
+
+def Find_crossings(yvals):
+    ym1 = yvals[0]
+    c = []
+    for i,y in enumerate(yvals):
+        if y<0 and ym1>=0:
+            c.append(-i)   # - == neg crossing
+        if y>0 and ym1 <= 0:
+            c.append(i)    #   positive crossing
+        ym1 = y
+    return c
+            
+
+def Est_derivative(yvals, w):
+    if w < 0:
+        return np.gradient(line,2)
+    if w > len(yvals)/2:
+        print(' derivative window {} is too big for {} values.'.format(w,len(yvals)))
+        quit()
+    else:
+        ym1 = yvals[0]
+        dydn = []
+        dn = 1 # for now
+        for y in yvals:
+            dy = y-ym1
+            dydn.append(dy/dn)
+            ym1 = y
+        if w>1:
+            dydn = smooth(dydn, window_len=w, window='hanning')        
+        return dydn
+ 
+    
+def Find_edges_line(line):
+    
+    #grad = np.gradient(line,2)
+    
+    grad = Est_derivative(line, 3)
+        
+    thresh = 0.1
+    edges = []
+    for i,gv in enumerate(grad):
+        if abs(gv) > thresh:
+            edges.append(i)
+
+    # get "edge of edges"
+    e2 = []
+    ep = edges[0]
+    for e in edges:
+        if e-ep > 1:    # leading edge of each gradient peak
+            e2.append(e)
+        ep = e
+    edges = e2
+    
+    
+        
+    return edges
+ 
+ 
+
+
+def linescores_pickle(fname):
+    #
+    #   Check for a pickle file of combined pre-computed Mech and Robot objects
+    #
+    #  TODO: refactor code to get rid of unused "test" argument
+    pprotocol = 2
+
+    print(' pickle: trying to open ', fname,' in ', os.getcwd())
+    #dumpflg = True
+    pick_payload = []
+    if(os.path.isfile(fname)):
+        with open(fname, 'rb') as pick:
+            print('\Trying to read pre-computed VQ codebook and images from '+fname)
+            pick_payload = pickle.load(pick)
+            pick.close()
+            print('Successfully read pre-computed VQ codebook and image')
+            print('pickle contained ', len(pick_payload[2]), ' codewords') 
+        return pick_payload
+    else:
+        return [fname, None, None, None, None, None]  # signal no pickle file
+    
+    
+
+
+

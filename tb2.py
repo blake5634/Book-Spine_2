@@ -6,7 +6,7 @@
 import numpy as np
 import cv2
 import sys as sys
-import t2blob as t2b
+import blob_processing as bpr
 import sys
 
 import book_classes as bc
@@ -78,7 +78,7 @@ if __name__=='__main__':
         #  each contour is a bookblob instance
         
         for c in contours:
-            bb = t2b.bblob(c)
+            bb = bpr.bblob(c)
             
             #if bb.area > 100:
                 #print(bb)
