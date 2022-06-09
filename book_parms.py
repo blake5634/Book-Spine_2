@@ -49,19 +49,26 @@ elong_max =  12
 
 #   find "boxy" blobs (which have sharp 90deg corners
 
-boxy_area_min  = int(area_min *  0.4)
-boxy_threshold = 3.5   # combined net boxy score thresh. (0-4)
+boxy_area_min  = area_min *  0.25       # must be this big to get promoted from rejects
+boxy_threshold = 2.5   # combined net boxy score thresh. (0-4)
 
 # weights fro the combined net boxy score:
 
-boxy_coef_corners   = 1
-boxy_coef_perim     = 0
+boxy_coef_corners   = 0.666
+boxy_coef_perim     = 0.1666
 boxy_coef_area      = 1.0 - boxy_coef_perim - boxy_coef_corners
 
-# for boxyCorners() method
-corner_dist_max_px = 50
+if boxy_coef_area < 0 or boxy_coef_area > 1:
+    print(' Illegal boxy coefficients (must sum to 1.0)')
+    quit()
 
-# we will just dicard blobs smaller than:
+# for boxyCorners() method
+corner_dist_max_px =  10    # to be a 'corner' contour must be this close to box corner
+box_side_len_pts   = 12     # contour pts to check either side of corner
+box_side_distmax   = 10     # avg px distance threshold
+
+
+# we will just discard blobs smaller than:
 noise_area_threshold = 250
 
 

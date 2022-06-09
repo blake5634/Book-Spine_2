@@ -285,13 +285,14 @@ def step01(imagedir, imagefilename):
             ctr = (b.centerpoint[0], b.centerpoint[1]+15)  # offset down a bit
             image = cv2.putText(image, astring, ctr, bpar.font, 0.5, bpar.colors['white'], 2, cv2.LINE_AA)
             
-        def bprint(image, b):
-            # print the boxiness on image
-            bx = b.boxiness
-            if bx > 2.0:
-                color = bpar.colors['yellow']
-            else:
-                color = bpar.colors['maroon']
+        def bprint(image, b, bx):
+            ## print the numerical boxiness on image 
+            #if bx > 2.0:
+                #color = bpar.colors['yellow']
+            #else:
+                #color = bpar.colors['green']
+            color = bpar.colors['yellow']
+
             boxystr = '{:3.1f}'.format(bx)
             image = cv2.putText(image, boxystr, b.centerpoint, bpar.font, 0.7 , color, 2, cv2.LINE_AA)
             
@@ -299,7 +300,7 @@ def step01(imagedir, imagefilename):
         for b in bookcs:   # rough books
             cv2.drawContours(blank, b.contour, -1, col, 3)
             cv2.drawContours(blank, [ b.box ], -1, bpar.colors['blue'], 3)
-            bprint(blank, b)
+            bprint(blank, b, b.boxiness)
             aprint(blank, b)            
 
         # draw the smaller but boxy contours
@@ -307,31 +308,32 @@ def step01(imagedir, imagefilename):
             #print('Drawing boxy contour: ', b)
             #print('Drawing boxy contour.box: ', b.box)
             
-            bprint(blank, b)
+            bprint(blank, b, b.boxiness)
             aprint(blank, b)            
             
             #boxystr = '{:3.1f}'.format(b.boxiness)
             #blank = cv2.putText(blank, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['yellow'], 2, cv2.LINE_AA)
             cv2.drawContours(blank, b.contour, -1, bpar.colors['green'],2)
-            cv2.drawContours(blank, [b.box]  , -1, bpar.colors['blue'],  thickness=1)
-
+            cv2.drawContours(blank, [b.box]  , -1, bpar.colors['green'],  thickness=1)
+        
+        #Display the contours drawn
         cv2.imshow(filename,blank)
         
         for r in rejectcs:
-            if r.area > 200 and r.boxiness >= bpar.boxy_threshold:
+            #if r.area > 200 and r.boxiness >= bpar.boxy_threshold:
+            if r.area > bpar.area_min*0.75:
                 #print('Found a reject boxy contour for drawing:')
                 #print(r)
                 cv2.drawContours(blank2, [r.box]  , -1, bpar.colors['blue'],  thickness=2) 
             else:
-                cv2.drawContours(blank2, [r.box] , -1 , bpar.colors['maroon'], thickness=2)
+                cv2.drawContours(blank2, [r.box] , -1 , bpar.colors['green'], thickness=2)
             
-            bprint(blank2, r)
-            aprint(blank2, r)            
-            #boxystr = '{:3.1f}'.format(r.boxiness)
-            #blank2 = cv2.putText(blank2, boxystr, r.centerpoint, bpar.font, 0.7 , bpar.colors['maroon'], 2, cv2.LINE_AA)
+            #bprint(blank2, r, r.boxiness)
+            bprint(blank2, r, bpr.boxyCornersSides(r.contour, r.box, blank2))
+            aprint(blank2, r) 
             cv2.drawContours(blank2, r.contour, -1, bpar.colors['green'], thickness=1)
-            #cv2.drawContours(blank2, r.contour, -1, bpar.colors['green'], thickness=cv2.FILLED)
             
+        #Display the 'reject' contours on another copy
         cv2.imshow('rejects', blank2)
         cv2.waitKey(-1)
  
