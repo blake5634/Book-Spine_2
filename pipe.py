@@ -206,8 +206,9 @@ def step01(imagedir, imagefilename):
         fn_root = imagefilename.split('.')[0]
         nameTemplate = 'blobSet{:02d}_{:}.png'
             
-        blank = cv2.imread('tcolor.png')  # copy of the scaled image for display
-        blank2 = blank.copy()             #copy for the rejects
+        ###  Images on which to display results/ outlines
+        detectedImage = cv2.imread('tcolor.png')  # copy of the scaled image for display
+        rejectImage = detectedImage.copy()             #copy for the rejects
         
         # set up morph kernels
         erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,  (bpar.esize, bpar.esize))
@@ -262,7 +263,7 @@ def step01(imagedir, imagefilename):
                 
                 pimtype(i2)
                 #  5) get contours
-                ntotcs, origcontours, boxycontours, rejects =  bpr.getBookBlobs(i2,blank2)
+                ntotcs, origcontours, boxycontours, rejects =  bpr.getBookBlobs(i2,rejectImage)
                 
                 for b in origcontours:
                     bookcs.append(b)
@@ -296,45 +297,49 @@ def step01(imagedir, imagefilename):
             boxystr = '{:3.1f}'.format(bx)
             image = cv2.putText(image, boxystr, b.centerpoint, bpar.font, 0.7 , color, 2, cv2.LINE_AA)
             
+            
+        print('Got here 1')
         # Draw the books:
         for b in bookcs:   # rough books
-            cv2.drawContours(blank, b.contour, -1, col, 3)
-            cv2.drawContours(blank, [ b.box ], -1, bpar.colors['blue'], 3)
-            bprint(blank, b, b.boxiness)
-            aprint(blank, b)            
+            cv2.drawContours(detectedImage, b.contour, -1, col, 3)
+            cv2.drawContours(detectedImage, [ b.box ], -1, bpar.colors['blue'], 3)
+            bprint(detectedImage, b, b.boxiness)
+            aprint(detectedImage, b)            
 
         # draw the smaller but boxy contours
         for b in boxycs:
             #print('Drawing boxy contour: ', b)
             #print('Drawing boxy contour.box: ', b.box)
             
-            bprint(blank, b, b.boxiness)
-            aprint(blank, b)            
+            bprint(detectedImage, b, b.boxiness)
+            aprint(detectedImage, b)            
             
             #boxystr = '{:3.1f}'.format(b.boxiness)
-            #blank = cv2.putText(blank, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['yellow'], 2, cv2.LINE_AA)
-            cv2.drawContours(blank, b.contour, -1, bpar.colors['green'],2)
-            cv2.drawContours(blank, [b.box]  , -1, bpar.colors['green'],  thickness=1)
+            #detectedImage = cv2.putText(detectedImage, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['yellow'], 2, cv2.LINE_AA)
+            cv2.drawContours(detectedImage, b.contour, -1, bpar.colors['green'],2)
+            cv2.drawContours(detectedImage, [b.box]  , -1, bpar.colors['green'],  thickness=1)
         
+        print('Got here 2')
         #Display the contours drawn
-        cv2.imshow(filename,blank)
+        cv2.imshow(filename,detectedImage)
         
         for r in rejectcs:
             #if r.area > 200 and r.boxiness >= bpar.boxy_threshold:
             if r.area > bpar.area_min*0.75:
                 #print('Found a reject boxy contour for drawing:')
                 #print(r)
-                cv2.drawContours(blank2, [r.box]  , -1, bpar.colors['blue'],  thickness=2) 
+                cv2.drawContours(rejectImage, [r.box]  , -1, bpar.colors['blue'],  thickness=2) 
             else:
-                cv2.drawContours(blank2, [r.box] , -1 , bpar.colors['green'], thickness=2)
+                cv2.drawContours(rejectImage, [r.box] , -1 , bpar.colors['green'], thickness=2)
             
-            #bprint(blank2, r, r.boxiness)
-            bprint(blank2, r, bpr.boxyCornersSides(r.contour, r.box, blank2))
-            aprint(blank2, r) 
-            cv2.drawContours(blank2, r.contour, -1, bpar.colors['green'], thickness=1)
+            #bprint(rejectImage, r, r.boxiness)
+            bprint(rejectImage, r, r.boxiness)
+            #bprint(rejectImage, r, bpr.boxyCornersSides(r.contour, r.box, rejectImage))
+            aprint(rejectImage, r) 
+            cv2.drawContours(rejectImage, r.contour, -1, bpar.colors['green'], thickness=1)
             
         #Display the 'reject' contours on another copy
-        cv2.imshow('rejects', blank2)
+        cv2.imshow('rejects', rejectImage)
         cv2.waitKey(-1)
  
     
@@ -420,7 +425,8 @@ if __name__=='__main__':
         clearpicks(clears)
 # read in image and perform VQ
 
-    filename = 'target.jpg'     # orig devel image    
+    #filename = 'target.jpg'     # orig devel image    
+    filename = 'FakeTest01.png'     # orig devel image    
     #filename = 'newtest01.jpg'
     #filename = 'newtest02.jpg'
     #filename = 'newtest03.jpg'

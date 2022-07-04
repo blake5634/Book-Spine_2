@@ -25,7 +25,7 @@ smooth_size    = -1* int(10*mm2pix)    # <0:   do not smooth
 blur_flag = True
 blur_rad_mm       =     0.75    # image must determine # pixels
 
-KM_Clusters = 20 # number of K-means clusters for color
+KM_Clusters = 8 # number of K-means clusters for color
  
 
 
@@ -44,7 +44,7 @@ dsize = 30  # dilate px
 #
 
 area_min = 2000
-elong_min = 4
+elong_min = 2
 elong_max =  12
 
 #   find "boxy" blobs (which have sharp 90deg corners
@@ -54,8 +54,8 @@ boxy_threshold = 2.5   # combined net boxy score thresh. (0-4)
 
 # weights fro the combined net boxy score:
 
-boxy_coef_corners   = 0.666
-boxy_coef_perim     = 0.1666
+boxy_coef_corners   = 1.0
+boxy_coef_perim     = 0.0
 boxy_coef_area      = 1.0 - boxy_coef_perim - boxy_coef_corners
 
 if boxy_coef_area < 0 or boxy_coef_area > 1:
@@ -63,9 +63,9 @@ if boxy_coef_area < 0 or boxy_coef_area > 1:
     quit()
 
 # for boxyCorners() method
-corner_dist_max_px =  10    # to be a 'corner' contour must be this close to box corner
-box_side_len_pts   = 12     # contour pts to check either side of corner
-box_side_distmax   = 10     # avg px distance threshold
+corner_dist_max_px =  15   # to be a 'corner' contour must be this close to box corner
+box_side_len_pts   =  6    # contour pts to check either side of corner
+box_side_distmax   =  8     # avg px distance threshold
 
 
 # we will just discard blobs smaller than:

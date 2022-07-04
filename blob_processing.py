@@ -43,8 +43,10 @@ def getBookBlobs(imC,imDisplay):
         quit()
     im = imC.image
     #blank = imC.blank()
-    blank = cv2.imread('tcolor.png')
+    #blank = cv2.imread('tcolor.png')
     #gimg = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    
+    # generate a binary image
     ret, bimg = cv2.threshold(im,127,255,cv2.THRESH_BINARY)  
     #contours, hierarchy = cv2.findContours(bimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contours, hierarchy = cv2.findContours(bimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -59,11 +61,11 @@ def getBookBlobs(imC,imDisplay):
     ndc = 0
     nlc = 0
     for i in range(len(contours)):
-        #print('\nLooking at Contour ',i)
+        print('\nLooking at Contour ',i)
         nlc +=1        
         #print('raw contour shape: ', contours[i].shape)
         c = bblob(contours[i],imDisplay)   # convert to book blob class
-        
+        #print(c)
         #
         #    the most book-like contours
         #
@@ -144,7 +146,7 @@ def boxyCornersSides(blob, box, image):
     clen =  cv2.arcLength(blob, True)  # contour length pixels (!= nctp!!!)
     #print ('contour: ', ct)
     nsidecorners = 0
-    # get min distances to corners and indeces in contours of min dist pts.
+    # get min distances to corners and indices in contours of min dist pts.
     dmins, cidxs = boxyCornersList(blob, box)
     bi = 0
     eligible = True   # can we get valid CornersSides score??
@@ -154,15 +156,18 @@ def boxyCornersSides(blob, box, image):
         #print('rejecting min(dmins): {:4.1f}'.format(min(dmins)))
         eligible = False # the contour is too far from box corners
     if eligible:
+        print('                                                    -------->   Start new box')
         for i in range(4): # go through the box's corner points 
             ##cv2.circle(image, box[i], 8, bpar.colors['blue'], 3)
             #print('\n\n\nNew corner ...')
             if dmins[i] < bpar.corner_dist_max_px:  # if the contour is close to this corner
                 print('                ----    close corner found')
+
                 #get the line points for this corner
                 if nctp > 4*bpar.box_side_len_pts: # don't bother with tiny blobs 
+                    cv2.circle(image, box[i] , 8, bpar.colors['navy'], 2)
                     #cv2.circle(image, box[i], 8, bpar.colors['blue'], 3)
-
+                    #lpx are "line points" which define edge lines of box
                     lp0 = box[i] #the corner point
                     lp1 = box[(i+1)%4]  #ahead point 
                     bcidx = i-1    # idx of behind point
@@ -197,7 +202,7 @@ def boxyCornersSides(blob, box, image):
                     #print('avg dist: {:5.1f} from {:} points'.format( dTotal/ntotal, ntotal))
                     if dTotal/ntotal <= bpar.box_side_distmax:   # check the average contour distance from box edges
                         print('                                          ----    close SIDE corner found')
-                        cv2.circle(image, lp0, 5, bpar.colors['white'], 1)
+                        cv2.circle(image, lp0, 8, bpar.colors['white'], 2)
                         #cv2.circle(image, lp1, 4, bpar.colors['red'], 1)
                         #cv2.circle(image, lp2, 3, bpar.colors['green'], 1)
                         nsidecorners += 1 
@@ -311,7 +316,7 @@ if __name__== '__main__':
         im1Image = bc.bookImage(im1,bpar.scale)
         im1Image.image = im1Image.gray()
         n, bookcontours, boxycontours, othercontours =  getBookBlobs(im1Image) 
-        bookcs = bookcs + bookcontours
+        bookcs += bookcontours
         
         
     print ('\n\n  Found {:} book contours \n\n'.format(len(bookcs)))
