@@ -17,7 +17,8 @@ class bblob:  # book blobs
             cy = int(self.M['m01']/self.M['m00'])
         else:
             cx = 20
-            cy = 20 
+            cy = 20
+        self.ID = ''    # a unique ID of each blob
         self.centerpoint = (cx,cy)
         #print('self.contour shape:',self.contour.shape)
         self.perim = cv2.arcLength(self.contour, True)
@@ -25,7 +26,7 @@ class bblob:  # book blobs
         self.rect = cv2.minAreaRect(self.contour) 
         self.box = np.int0(cv2.boxPoints(self.rect)) 
         self.elong = box_elong(self.box)
-        self.boxiness = boxy(self.contour, self.box, image)
+        self.boxiness = None  #boxy(self.contour, self.box, image)
         
     def __repr__(self):
         s = 'book blob:\n'
@@ -37,7 +38,7 @@ class bblob:  # book blobs
         s += '   boxiness:          {:}\n'.format(self.boxiness)
         return s
         
-def getBookBlobs(imC,imDisplay):
+def getBookBlobs(imC,imDisplay,color_blobID):
     if len(imC.ishape()) != 2:
         print('getBookBlobs: input should be gray not BGR')
         quit()
@@ -65,6 +66,8 @@ def getBookBlobs(imC,imDisplay):
         nlc +=1        
         #print('raw contour shape: ', contours[i].shape)
         c = bblob(contours[i],imDisplay)   # convert to book blob class
+        c.ID = '{:}.{:}'.format(color_blobID, i)
+        c.boxiness = boxy(c, imDisplay)
         #print(c)
         #
         #    the most book-like contours
@@ -94,14 +97,18 @@ def getBookBlobs(imC,imDisplay):
 #   (e.g. a couple of corners close to bounding rectangle)
 #
 
-def boxy(blob, box, image):
+#  blob:   bblob object containing contour and box 
+#  image:  image to draw contour etc on
+
+def boxy(blob, image):
+    box = blob.box
     a1 = bpar.boxy_coef_corners
     a2 = bpar.boxy_coef_perim
     a3 = bpar.boxy_coef_area 
     if boxArea(box) > 500:
-        sc1 = boxyCornersSides(blob,box,image)
-        sc2 = boxyPerim(blob,box)
-        sc3 = boxyArea(blob,box)
+        sc1 = boxyCornersSides(blob,image)
+        sc2 = boxyPerim(blob)
+        sc3 = boxyArea(blob)
         score = a1*sc1 + a2*sc2 + a3*sc3
         print('boxiness: {:4.1f} : CS:{:4.1f}, Pe:{:4.1f}, Ar:{:4.1f} '.format(score, sc1,sc2,sc3))
         #print('boxy score: {:3.1f}'.format(score))
@@ -110,10 +117,10 @@ def boxy(blob, box, image):
         return 0
     
 #  areas the same between min area box and contour?
-def boxyArea(blob, box):
+def boxyArea(blob):
     ascale = 2000      # guestimate??
-    box_area = boxArea(box)
-    adiff = np.minimum(1.0, np.abs((box_area - cv2.contourArea(blob))/ascale) )  # note contuour area < box area for all cases
+    box_area = boxArea(blob.box)
+    adiff = np.minimum(1.0, np.abs((box_area - cv2.contourArea(blob.contour))/ascale) )  # note contour area < box area for all cases
     return np.minimum(4.0, 4.0*(1.0 - adiff))
 
 def boxArea(box):        
@@ -122,17 +129,18 @@ def boxArea(box):
     return d1*d2
     
 # boxiness measure:   contour length == rectangle perimiter?
-def boxyPerim(blob, box):
+def boxyPerim(blob):
     # use the difference in perimeter between min vol box and
     #   the contour perimeter
     #b1 = boxyOLD(blob,box)
+    box = blob.box
     d1 = pdist(box[0],box[1])
     d2 = pdist(box[1],box[2])
     boxperimeter = float(2*(d1+d2))
     if boxperimeter < 0.001:
         perdiff = 1.0
     else:
-        perdiff = np.abs(boxperimeter - cv2.arcLength(blob,True))/boxperimeter
+        perdiff = np.abs(boxperimeter - cv2.arcLength(blob.contour,True))/boxperimeter
     if perdiff > 1.0:
         perdiff = 1.00
     score = (1-perdiff)*4   # 4 is perfect to match old boxy
@@ -140,23 +148,31 @@ def boxyPerim(blob, box):
 
 #  How many corners have contour extending along the sides beyond corner?
 #    (e.g. visual 90 deg angles in the contour)
-def boxyCornersSides(blob, box, image):
-    ct = blob  # the contour
-    nctp = blob.shape[0]  # contour length in points
-    clen =  cv2.arcLength(blob, True)  # contour length pixels (!= nctp!!!)
+def boxyCornersSides(blob, image):
+    ct = blob.contour  # the contour
+    nctp = ct.shape[0]  # contour length in points
+    clen =  cv2.arcLength(ct, True)  # contour length pixels (!= nctp!!!)
     #print ('contour: ', ct)
     nsidecorners = 0
     # get min distances to corners and indices in contours of min dist pts.
-    dmins, cidxs = boxyCornersList(blob, box)
+    dmins, cidxs = boxyCornersList(ct, blob.box)
     bi = 0
     eligible = True   # can we get valid CornersSides score??
-    if boxArea(box) < bpar.boxy_area_min:
+    if boxArea(blob.box) < bpar.boxy_area_min:
         eligible = False  # too tiny!
     if min(dmins) > bpar.corner_dist_max_px: 
         #print('rejecting min(dmins): {:4.1f}'.format(min(dmins)))
         eligible = False # the contour is too far from box corners
     if eligible:
-        print('                                                    -------->   Start new box')
+        print('                                          -------->   Start new contour: ' , blob.ID)
+        debug = False
+        if blob.ID == 'C03.0':
+            debug = True
+        if debug:
+            print(' DEBUG BLOB:')
+            print('box:',blob.box)
+            print('cont:', blob.contour)
+    
         for i in range(4): # go through the box's corner points 
             ##cv2.circle(image, box[i], 8, bpar.colors['blue'], 3)
             #print('\n\n\nNew corner ...')
@@ -165,41 +181,46 @@ def boxyCornersSides(blob, box, image):
 
                 #get the line points for this corner
                 if nctp > 4*bpar.box_side_len_pts: # don't bother with tiny blobs 
-                    cv2.circle(image, box[i] , 8, bpar.colors['navy'], 2)
+                    cv2.circle(image, blob.box[i] , 8, bpar.colors['navy'], 2)
                     #cv2.circle(image, box[i], 8, bpar.colors['blue'], 3)
-                    #lpx are "line points" which define edge lines of box
-                    lp0 = box[i] #the corner point
-                    lp1 = box[(i+1)%4]  #ahead point 
+                    #lpx are "line points" which define edge lines of box 
+                    #  "line points" are adjacent corners to the current corner point
+                    lp0 = blob.box[i] #the corner point
+                    lp1 = blob.box[(i+1)%4]  #ahead point 
                     bcidx = i-1    # idx of behind point
                     if bcidx < 0:
                         bcidx = 3
-                    lp2 = box[bcidx]  # behind point
-                    
+                    lp2 = blob.box[bcidx]  # behind point
+                    if debug:
+                        print('line points: ', lp2, lp0, lp1)
+                        
+                    # if ... ?
                     # this box corner is close to contour
                     # study neighbor points on contour to this corner
                     dTotal = 0.0
                     ntotal = 0
                     #
                     #   study contours extending 'next to' box edge away from corner
-                    for j in range(bpar.box_side_len_pts):  # 
-                        ci2 = (i-j)%nctp  # look "behind" the corner close point on the contour
-                        #print('\nchecking0: ',  lp0 )
-                        #print('checking1: ',  lp2)
-                        #print('ci2: ', ci2, type(ci2))
-                        #print('checking3: ',  ct[ci2])
-                        #print('checking4: {:4.1f}'.format( dpt2line(lp0,lp2,ct[ci2][0])))
-                        dTotal += dpt2line(lp0,lp2,ct[ci2][0])
+                    for j in range(bpar.box_side_len_pts):  # param is # of adjacent cont pts to study
+                        ci2 = (cidxs[i]-j)%nctp  # look "behind" the corner close point on the contour
+                        if debug:
+                            print('\nchecking0 box line: ',  lp0 , lp1) 
+                            print('ci2: cont idx/ ct[idx]', ci2, type(ci2), ct[ci2][0])
+                            print('checking3: cont. point ',  ct[ci2])
+                            print('checking4 dist: {:4.1f}'.format( dpt2line(lp0,lp1,ct[ci2][0])))
+                        dTotal += dpt2line(lp0,lp1,ct[ci2][0])
                         ntotal += 1 
                     for j in range(bpar.box_side_len_pts):  # look ahead of the corner
-                        ci1 =   (i+j)%nctp    #wrap around the closed contour
-                        #print('checking5: ',  lp0 )
-                        #print('checking6: ',  lp2)
-                        #print('ci1: ', ci1, type(ci1))
-                        #print('checking8: ',  ct[ci1])
-                        #print('checking9: ',  dpt2line(lp0,lp2,ct[ci1][0]))
-                        dTotal += dpt2line(lp0,lp1,ct[ci1][0])
+                        ci1 = (cidxs[i]+j)%nctp    #wrap around the closed contour
+                        if debug:
+                            print('\nchecking5 box line: ',  lp0 , lp2) 
+                            print('ci2: cont idx/ ct[idx]', ci1, type(ci1), ct[ci1][0])
+                            print('checking6: cont. point ',  ct[ci1])
+                            print('checking7 dist: {:4.1f}'.format( dpt2line(lp0,lp2,ct[ci1][0])))
+                        dTotal += dpt2line(lp0,lp2,ct[ci1][0])
                         ntotal += 1
-                    #print('avg dist: {:5.1f} from {:} points'.format( dTotal/ntotal, ntotal))
+                    if debug:
+                        print('avg dist: {:5.1f} from {:} points'.format( dTotal/ntotal, ntotal))
                     if dTotal/ntotal <= bpar.box_side_distmax:   # check the average contour distance from box edges
                         print('                                          ----    close SIDE corner found')
                         cv2.circle(image, lp0, 8, bpar.colors['white'], 2)
@@ -223,7 +244,8 @@ def dpt2line(p1, p2, pt):
     return num/den
 
 ##   How many box corners are close to a single contour pt. 
-def boxyCorners(blob, box):
+def boxyCorners(blob):
+    box = blob.box
     dmins, idxs = boxyCornersList(blob,box)
     nclose = 0
     for i in range(4):
@@ -231,7 +253,8 @@ def boxyCorners(blob, box):
             nclose += 1   # how many corners are close to contour
     return nclose
 
-def boxyCornersOrig(blob, box):
+def boxyCornersOrig(blob):
+    box=blob.box
     dmins, idxs = boxyCornersList(blob,box)
     nclose = 0
     for i in range(4):

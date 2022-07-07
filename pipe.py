@@ -134,8 +134,12 @@ def step00(imagedir, imagefilename):
             
             fn_root = pic_filename.split('.')[0].split('/')[-1]
             nameTemplate = 'blobSet{:02d}_{:}.png'
+            rmTemplate   = 'blobSet*.png'
             
-            if not os.path.isfile(bpar.tmp_img_path + nameTemplate.format(00, fn_root)):  # unless they exist
+            #if not os.path.isfile(bpar.tmp_img_path + nameTemplate.format(00, fn_root)):  # unless they exist
+            if True:   # this is now "guarded" by pickle file 
+                os.system('rm {:}'.format(bpar.tmp_img_path+rmTemplate))
+                print('\\n\n                REMOVING '+bpar.tmp_img_path+rmTemplate+'\n\n')
                 for i in range(len(VQ_color_ctrs)):
                     #  write out a binary image for each VQ color cluster 
                     tmpimg = lcolor_img.icopy()
@@ -263,7 +267,8 @@ def step01(imagedir, imagefilename):
                 
                 pimtype(i2)
                 #  5) get contours
-                ntotcs, origcontours, boxycontours, rejects =  bpr.getBookBlobs(i2,rejectImage)
+                idstring = 'C{:02d}'.format(i)
+                ntotcs, origcontours, boxycontours, rejects =  bpr.getBookBlobs(i2,rejectImage,idstring)
                 
                 for b in origcontours:
                     bookcs.append(b)
@@ -280,6 +285,10 @@ def step01(imagedir, imagefilename):
         
         col = bpar.colors['red']
         
+        def IDprint(image,b):
+            ctr = (b.centerpoint[0], b.centerpoint[1]-20)  # offset up a bit
+            image = cv2.putText(image, b.ID, ctr, bpar.font, 0.5, bpar.colors['green'], 2, cv2.LINE_AA)
+            
         def aprint(image, b):
             # print the area on image
             astring = '{:}'.format(int(b.area))
@@ -305,14 +314,16 @@ def step01(imagedir, imagefilename):
             cv2.drawContours(detectedImage, [ b.box ], -1, bpar.colors['blue'], 3)
             bprint(detectedImage, b, b.boxiness)
             aprint(detectedImage, b)            
-
+            IDprint(detectedImage, b)
+            
         # draw the smaller but boxy contours
         for b in boxycs:
             #print('Drawing boxy contour: ', b)
             #print('Drawing boxy contour.box: ', b.box)
             
             bprint(detectedImage, b, b.boxiness)
-            aprint(detectedImage, b)            
+            aprint(detectedImage, b)          
+            IDprint(detectedImage, b)    
             
             #boxystr = '{:3.1f}'.format(b.boxiness)
             #detectedImage = cv2.putText(detectedImage, boxystr, b.centerpoint, bpar.font, 0.7 , bpar.colors['yellow'], 2, cv2.LINE_AA)
@@ -332,6 +343,7 @@ def step01(imagedir, imagefilename):
             else:
                 cv2.drawContours(rejectImage, [r.box] , -1 , bpar.colors['green'], thickness=2)
             
+            IDprint(rejectImage, r)
             #bprint(rejectImage, r, r.boxiness)
             bprint(rejectImage, r, r.boxiness)
             #bprint(rejectImage, r, bpr.boxyCornersSides(r.contour, r.box, rejectImage))
@@ -415,6 +427,9 @@ def clearpicks(Ns):
         
         
 if __name__=='__main__':
+    
+    
+    print('\n\n                                                           - - -  Starting Run   - - - \n\n')
     a = sys.argv
     clears = []
     for i,ar in enumerate(a):
